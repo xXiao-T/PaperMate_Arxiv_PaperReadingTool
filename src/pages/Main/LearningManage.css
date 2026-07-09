@@ -1,0 +1,36 @@
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.stat-card {
+  padding: 24px; border-radius: 24px; background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+}
+.stat-title { color: #64748b; font-size: 14px; font-weight: 600; margin-bottom: 8px;}
+.stat-value { font-size: 36px; font-weight: 700; color: #0f172a; font-family: 'Space Grotesk', sans-serif;}
+.progress-bg { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 16px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 4px; }
+
+/* 增强卡片悬浮时的立体感和边框呼吸感 */
+.stat-card {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s;
+  border: 1px solid rgba(255,255,255,0.8);
+}
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.08);
+  border-color: rgba(147, 197, 253, 0.6);
+}
+
+/* 进度条扫光动画，增加高级感 */
+.progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 2.5s infinite;
+}
+@keyframes shimmer {
+  100% { left: 200%; }
+}
