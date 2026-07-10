@@ -1,31 +1,223 @@
 .reader-layout { display: flex; gap: 16px; height: calc(100vh - 120px); }
 .reader-notes { display: flex; flex: 1; gap: 16px; }
-.reader-notes-panel { flex: 0 0 300px; display: flex; flex-direction: column; height: 100%; }
+.reader-notes-panel {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: flex-basis 0.3s ease;
+}
+.reader-notes-panel-collapsed {
+  flex: 0 0 52px !important;
+}
+.reader-notes-panel-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .reader-main {
   flex: 7; background: #fff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);
 }
-.reader-sidebar { flex: 3; display: flex; flex-direction: column; gap: 20px; min-height: 0; }
+
+/* PDF 查看区容器（支持双列） */
+.reader-main-area {
+  flex: 7;
+  display: flex;
+  gap: 12px;
+}
+.reader-main-split {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 单列模式下的 + 按钮区域 */
+.reader-add-btn-area {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+.reader-add-btn-side {
+  width: 34px;
+  height: 34px;
+}
+
+/* 双列模式踢出文献按钮 */
+.reader-kick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  background: #fff;
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.reader-kick-btn:hover {
+  background: #fef2f2;
+  border-color: rgba(239, 68, 68, 0.6);
+  transform: scale(1.05);
+}
+.reader-kick-btn:active {
+  transform: scale(0.95);
+}
+.reader-sidebar {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  transition: flex-basis 0.3s ease;
+}
+.reader-sidebar-collapsed {
+  flex: 0 0 52px !important;
+}
+
+/* 收起状态的细长竖条 */
+.collapsed-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 24px;
+  cursor: pointer;
+  padding: 12px 0;
+  transition: background 0.2s ease;
+}
+.collapsed-strip:hover {
+  background: rgba(241, 245, 249, 1);
+}
+.collapsed-strip-right {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+/* 收起/展开按钮 */
+.collapse-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.collapse-toggle-btn:hover {
+  background: rgba(148, 163, 184, 0.15);
+  color: #475569;
+}
 .reader-ai-panel { padding: 24px 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .chat-panel-top { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .pdf-placeholder { flex: 1; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-weight: 500; }
+
+/* PDF 工具栏 */
+.reader-pdf-toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.reader-page-label {
+  font-size: 13px;
+  color: #64748b;
+  flex: 1;
+  text-align: center;
+}
+.reader-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.85);
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+.reader-add-btn:hover {
+  background: rgba(241, 245, 249, 1);
+  border-color: rgba(148, 163, 184, 0.8);
+  color: #0f172a;
+}
+.reader-add-btn:active {
+  transform: scale(0.93);
+  background: rgba(226, 232, 240, 0.9);
+}
+.reader-toolbar-spacer {
+  width: 30px;
+  flex-shrink: 0;
+}
+
+/* 添加内容弹窗 */
+.reader-add-modal {
+  width: min(900px, 100%) !important;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.reader-add-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 4px;
+}
+
+/* 当前阅读的文献暗置 */
+.reader-current-paper {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+.reader-current-paper:hover {
+  transform: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+}
+.reader-current-paper::before {
+  display: none !important;
+}
 .chat-list { flex: 1; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; margin-bottom: 0; }
 .chat-input-wrapper { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.chat-input-actions { display: flex; gap: 12px; }
+.chat-input-actions { display: flex; gap: 10px; }
 .chat-action-button {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
   border-radius: 999px;
-  background: #fff;
-  color: #334155;
-  font-size: 13px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.18);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 .chat-action-button:hover {
-  background: #f8fafc;
-  border-color: rgba(148, 163, 184, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.22);
+}
+.chat-action-button:active {
+  transform: translateY(0);
+  opacity: 0.95;
 }
 .chat-message { display: flex; width: 100%; }
 .chat-message-user { justify-content: flex-end; }
@@ -33,16 +225,39 @@
 .chat-bubble {
   position: relative;
   display: inline-flex;
+  flex-direction: column;
   width: fit-content;
-  max-width: 70%;
+  max-width: 95%;
   min-width: 72px;
-  padding: 16px 18px;
+  padding: 16px 18px 24px;
   border-radius: 18px;
   font-size: 14px;
   line-height: 1.8;
   color: #334155;
   word-break: break-word;
   white-space: pre-wrap;
+}
+.bubble-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.bubble-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+.bubble-icon-button:hover {
+  color: #0f172a;
 }
 .chat-bubble-user {
   background: #dbeafe;

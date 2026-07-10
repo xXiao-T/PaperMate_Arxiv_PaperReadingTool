@@ -52,7 +52,7 @@ export default function Sidebar() {
         justifyContent: 'space-between', /* 将用户信息和退出按钮推向两端 */
         alignItems: 'center'
       }}>
-        <div style={{ display: isReader ? 'none' : 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.3s' }} onMouseOver={(e) => e.currentTarget.style.opacity = 1} onMouseOut={(e) => e.currentTarget.style.opacity = 0.7}>
+        <div className={`sidebar-user ${isReader ? 'collapsed' : ''}`} onMouseOver={(e) => e.currentTarget.style.opacity = 1} onMouseOut={(e) => { if (!isReader) e.currentTarget.style.opacity = 0.7; }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #c084fc, #60a5fa)' }}></div>
           <span style={{ fontSize: '14px' }}>用户名</span>
         </div>

@@ -7,7 +7,7 @@ export default function LearningManage() {
     <div style={{ height: '100%' }}>
       <header className="page-header">
         <div>
-          <h1 className="page-title">跟踪您的学术阅读进度</h1>
+          <h1 className="page-title">我的阅读进度</h1>
         </div>
       </header>
 

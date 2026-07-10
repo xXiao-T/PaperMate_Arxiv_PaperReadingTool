@@ -28,8 +28,114 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding-bottom: 16px;
+  padding-bottom: 15px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.library-tag-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.tag-chip,
+.tag-chip-add,
+.tag-chip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.85);
+  color: rgba(100, 116, 139, 0.9);
+  font-size: 13px;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  position: relative;
+}
+.tag-chip-action,
+.tag-chip-add {
+  cursor: pointer;
+}
+.tag-chip-action:hover,
+.tag-chip-add:hover {
+  transform: translateY(-1px);
+  background: rgba(241, 245, 249, 1);
+  border-color: rgba(148, 163, 184, 0.8);
+}
+.tag-chip-tag {
+  padding-right: 12px;
+}
+.tag-chip-active {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+.tag-chip-active span {
+  color: inherit;
+}
+.library-filter-helper {
+  padding-left: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.filter-clear-text {
+  display: inline-block;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.filter-clear-text:hover {
+  color: #64748b;
+}
+.filter-clear-text-disabled {
+  color: #94a3b8;
+  cursor: default;
+  opacity: 0.75;
+}
+.tag-chip-tag:hover .tag-remove-button {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+.tag-chip-add {
+  font-weight: 700;
+  color: #2563eb;
+}
+.tag-remove-button {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #ffffff;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tag-remove-button:hover {
+  background: #dc2626;
+}
+.tag-input {
+  min-width: 120px;
+  max-width: 240px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(248, 250, 252, 0.95);
+  color: #0f172a;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.tag-input:focus {
+  border-color: #2563eb;
+  background: #fff;
 }
 .page-title {
   font-size: 28px;

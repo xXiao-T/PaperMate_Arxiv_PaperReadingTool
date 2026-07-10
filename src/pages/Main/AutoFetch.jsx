@@ -7,7 +7,7 @@ export default function AutoFetch() {
     <div style={{ height: '100%' }}>
       <header className="page-header">
         <div>
-          <h1 className="page-title">让文献来找您</h1>
+          <h1 className="page-title">让文献来找我</h1>
         </div>
       </header>
 
