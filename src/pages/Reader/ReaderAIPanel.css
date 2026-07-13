@@ -1,0 +1,301 @@
+/* ============================================
+    ReaderAIPanel — AI 对话面板样式
+   ============================================ */
+
+/* ---- 面板容器 ---- */
+.rap-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+/* ---- 折叠竖条 ---- */
+.rap-collapsed-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 24px;
+  cursor: pointer;
+  padding: 12px 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: background 0.2s ease;
+}
+
+.rap-collapsed-strip:hover {
+  background: rgba(241, 245, 249, 1);
+}
+
+/* ---- 头部 ---- */
+.rap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.rap-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.rap-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 头部图标按钮 */
+.rap-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rap-icon-btn:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+.rap-stop-btn {
+  color: #ef4444;
+}
+
+.rap-stop-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+/* ---- 状态徽章 ---- */
+.rap-streaming-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  animation: rap-pulse-badge 1.6s ease-in-out infinite;
+}
+
+@keyframes rap-pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.rap-error-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* ---- 消息列表 ---- */
+.rap-message-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---- 空状态 ---- */
+.rap-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.rap-empty-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+
+.rap-empty-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ---- 快捷指令行（空状态中） ---- */
+.rap-empty .qa-row {
+  margin-top: 8px;
+}
+
+/* ---- 快捷指令行（内联，有消息时） ---- */
+.rap-quick-actions-inline {
+  padding: 0 14px 8px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.rap-quick-actions-inline::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- 全局错误提示条 ---- */
+.rap-global-error {
+  margin: 0 14px 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 12px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+/* ---- 输入区域 ---- */
+.rap-input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.rap-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #334155;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rap-input:focus {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.rap-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rap-input::placeholder {
+  color: #94a3b8;
+}
+
+/* 发送按钮 */
+.rap-send-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.rap-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25);
+}
+
+.rap-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rap-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ============================================
+    QuickActions 样式（内联在此以保持内聚）
+   ============================================ */
+.qa-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.6);
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.qa-chip:hover:not(:disabled) {
+  background: rgba(219, 234, 254, 0.8);
+  border-color: rgba(59, 130, 246, 0.35);
+  transform: translateY(-1px);
+}
+
+.qa-chip:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.qa-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.qa-chip-icon {
+  flex-shrink: 0;
+}

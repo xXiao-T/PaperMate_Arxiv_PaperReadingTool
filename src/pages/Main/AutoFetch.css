@@ -1,0 +1,44 @@
+.form-card { padding: 32px; border-radius: 24px; background: rgba(255,255,255,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.4); }
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;}
+.form-input {
+  width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid #cbd5e1;
+  background: #f8fafc; color: #1e293b; transition: all 0.3s;
+}
+.form-input:focus { outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.task-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; margin-bottom: 12px; transition: transform 0.2s;
+}
+.task-item:hover { transform: translateX(4px); border-color: #cbd5e1; }
+.status-badge { padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.status-active { background: #dcfce7; color: #166534; }
+.status-paused { background: #f1f5f9; color: #475569; }
+
+/* 强化表单输入框的拟物通透感 */
+.form-input {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+}
+.form-input:hover { background: rgba(255, 255, 255, 0.7); }
+
+/* 任务列表条目的微交互与发光效果 */
+.task-item {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+.task-item:hover {
+  transform: translateX(6px);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.08);
+  border-color: rgba(147, 197, 253, 0.5);
+  background: #ffffff;
+}
+
+/* 状态徽章添加阴影 */
+.status-badge {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
