@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.papermate: DEBUG
+    org.springframework.security: DEBUG
