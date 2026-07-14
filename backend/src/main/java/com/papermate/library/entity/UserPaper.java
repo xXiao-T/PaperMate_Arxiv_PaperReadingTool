@@ -1,55 +1,52 @@
 package com.papermate.library.entity;
 
-import com.papermate.auth.entity.User;
-import com.papermate.paper.entity.Paper;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_papers")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "user_papers", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "paper_id"})
+})
 public class UserPaper {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "paper_id", nullable = false)
-    private Paper paper;
+    @Column(name = "paper_id", nullable = false)
+    private Long paperId;
 
-    @Column(name = "is_starred")
-    @Builder.Default
-    private Boolean isStarred = false;
+    @Column(nullable = false)
+    private Boolean favorited = true;
 
-    @Column(name = "is_favorited")
-    @Builder.Default
-    private Boolean isFavorited = true;
+    @Column(nullable = false)
+    private Boolean starred = false;
 
-    @CreationTimestamp
-    @Column(name = "added_at", updatable = false)
-    private LocalDateTime addedAt;
+    @Column(name = "imported_at")
+    private LocalDateTime importedAt;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() { createdAt = LocalDateTime.now(); }
+
+    public UserPaper() {}
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getPaperId() { return paperId; }
+    public void setPaperId(Long paperId) { this.paperId = paperId; }
+    public Boolean getFavorited() { return favorited; }
+    public void setFavorited(Boolean favorited) { this.favorited = favorited; }
+    public Boolean getStarred() { return starred; }
+    public void setStarred(Boolean starred) { this.starred = starred; }
+    public LocalDateTime getImportedAt() { return importedAt; }
+    public void setImportedAt(LocalDateTime importedAt) { this.importedAt = importedAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
