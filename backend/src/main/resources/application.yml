@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: papermate-backend
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/papermate?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf-8
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+jwt:
+  secret: PaperMateSecretKeyForJWTTokenGenerationMustBeLongEnough256Bits!!
+  expiration: 86400000  # 24 hours in milliseconds
