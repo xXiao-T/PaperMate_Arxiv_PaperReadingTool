@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Auth.css";
 
@@ -11,6 +11,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -52,8 +54,40 @@ export default function Register() {
         <form onSubmit={handleRegister}>
           <input type="text" placeholder="用户名" className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} />
           <input type="email" placeholder="邮箱" className="input-field" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" placeholder="密码（8位以上，含字母和数字）" className="input-field" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <input type="password" placeholder="确认密码" className="input-field" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="密码（8位以上，含字母和数字）"
+              className="input-field"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          <div className="password-wrapper">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="确认密码"
+              className="input-field"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           {error && <p style={{ color: "#f87171", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
           {success && <p style={{ color: "#4ade80", fontSize: "13px", marginBottom: "12px" }}>账号创建成功，正在登录…</p>}
           <button type="submit" className="btn-primary" disabled={loading} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", width: "100%" }}>

@@ -2,14 +2,18 @@ import React from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Search, BookOpen, Book, TrendingUp, DownloadCloud, LogOut } from 'lucide-react';
 import './Sidebar.css';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const isReader = location.pathname.startsWith('/reader');
 
+  const { logout } = useAuth();
+
   // 点击退出登录按钮时，导航到登录页面
   const handleLogout = () => {
+    logout();
     navigate('/login');
   };
 

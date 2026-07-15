@@ -22,13 +22,16 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final ResetCodeService resetCodeService;
 
     public AuthServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
-                           JwtUtil jwtUtil) {
+                           JwtUtil jwtUtil,
+                           ResetCodeService resetCodeService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.resetCodeService = resetCodeService;
     }
 
     @Override
@@ -115,5 +118,25 @@ public class AuthServiceImpl implements AuthService {
         }
 
         throw new IllegalArgumentException("无法获取当前用户信息");
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        // 1. 再次防线：校验验证码（防止有人跳过验证页面直接调用重置接口）
+        if (!resetCodeService.verifyCode(email, code)) {
+            throw new IllegalArgumentException("验证码错误或已失效");
+        }
+        
+        // 2. 根据邮箱查找用户
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("该邮箱未注册"));
+        
+        // 3. 将新密码加密并保存
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        // 4. 销毁验证码，保证一次性使用
+        resetCodeService.removeCode(email);
     }
 }

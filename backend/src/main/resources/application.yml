@@ -15,6 +15,18 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  mail:
+    host: smtp.qq.com       # 例如使用QQ邮箱
+    port: 465
+    username: 1545535109@qq.com # 替换为你的发件邮箱
+    password: rntptsimgyekhbbd    # 替换为你的SMTP授权码
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
 
 jwt:
   secret: PaperMate2026JwtSecretKeyForSoftEngineeringCourseProject

@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers("/api/papers/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/send-reset-code", "/api/auth/verify-reset-code", "/api/auth/reset-password").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

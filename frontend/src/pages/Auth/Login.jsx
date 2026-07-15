@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import "./Auth.css";
 
@@ -9,6 +9,7 @@ export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,7 +41,23 @@ export default function Login() {
         </div>
         <form onSubmit={handleLogin}>
           <input type="text" placeholder="用户名" className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} />
-          <input type="password" placeholder="密码" className="input-field" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="密码"
+              className="input-field"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", fontSize: "14px" }}>
             <Link to="/forgot-password" style={{ color: "#60a5fa" }}>忘记密码？</Link>
           </div>
