@@ -2,12 +2,12 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/papermate?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: 2006
+    password: REPLACE_ME
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
 
 jwt:
-  secret: PaperMate2026JwtSecretKeyForSoftEngineeringCourseProject
+  secret: REPLACE_ME
   expiration: 86400000
