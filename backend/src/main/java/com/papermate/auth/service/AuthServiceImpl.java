@@ -69,9 +69,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginVO login(LoginRequest request) {
-        // 1. Find user by username
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("用户名或密码错误"));
+        String loginId = request.getUsername();  // 字段名保持 username，实际接受用户名或邮箱
+
+        // 1. 按用户名或邮箱查找（含 @ 则视为邮箱）
+        User user;
+        if (loginId.contains("@")) {
+            user = userRepository.findByEmail(loginId)
+                    .orElseThrow(() -> new IllegalArgumentException("邮箱或密码错误"));
+        } else {
+            user = userRepository.findByUsername(loginId)
+                    .orElseThrow(() -> new IllegalArgumentException("用户名或密码错误"));
+        }
 
         // 2. Check account is active
         if (Boolean.FALSE.equals(user.getIsActive())) {

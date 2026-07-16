@@ -16,7 +16,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password) {
-      setError("请输入用户名和密码");
+      setError("请输入用户名/邮箱和密码");
       return;
     }
     setLoading(true); setError("");
@@ -40,7 +40,7 @@ export default function Login() {
           <p style={{ color: "#94a3b8", fontSize: "14px" }}>登录 PaperMate</p>
         </div>
         <form onSubmit={handleLogin}>
-          <input type="text" placeholder="用户名" className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input type="text" placeholder="用户名或邮箱" className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} />
           <div className="password-wrapper">
             <input
               type={showPassword ? "text" : "password"}

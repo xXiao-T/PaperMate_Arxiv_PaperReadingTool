@@ -9,7 +9,7 @@ export default function Sidebar() {
   const location = useLocation();
   const isReader = location.pathname.startsWith('/reader');
 
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   // 点击退出登录按钮时，导航到登录页面
   const handleLogout = () => {
@@ -58,7 +58,7 @@ export default function Sidebar() {
       }}>
         <div className={`sidebar-user ${isReader ? 'collapsed' : ''}`} onMouseOver={(e) => e.currentTarget.style.opacity = 1} onMouseOut={(e) => { if (!isReader) e.currentTarget.style.opacity = 0.7; }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #c084fc, #60a5fa)' }}></div>
-          <span style={{ fontSize: '14px' }}>用户名</span>
+          <span style={{ fontSize: '14px' }}>{user?.username || '未登录'}</span>
         </div>
         
         {/* 退出按钮 */}
