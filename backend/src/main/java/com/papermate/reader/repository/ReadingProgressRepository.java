@@ -8,8 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface ReadingProgressRepository extends JpaRepository<ReadingProgress, Long> {
-
     Optional<ReadingProgress> findByUserIdAndPaperId(Long userId, Long paperId);
 
-    long countByUserIdAndProgressPercentageGreaterThan(Long userId, Double threshold);
+    long countByUserIdAndCompletedTrue(Long userId);
 }

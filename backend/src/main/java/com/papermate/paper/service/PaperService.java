@@ -1,96 +1,189 @@
 package com.papermate.paper.service;
 
-import com.papermate.library.entity.UserPaper;
-import com.papermate.library.repository.UserPaperRepository;
+import com.papermate.common.utils.SecurityUtil;
 import com.papermate.paper.dto.PaperDTO;
 import com.papermate.paper.dto.PaperDetailVO;
 import com.papermate.paper.dto.PaperImportRequest;
+import com.papermate.paper.dto.PaperPageVO;
 import com.papermate.paper.entity.Paper;
+import com.papermate.paper.exception.PaperNotFoundException;
 import com.papermate.paper.repository.PaperRepository;
 import com.papermate.paper.specification.PaperSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PaperService {
-    private final PaperRepository paperRepository;
-    private final UserPaperRepository userPaperRepository;
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final Pattern ARXIV_URL_PATTERN = Pattern.compile(
+        "(?i)^https?://(?:www\\.)?arxiv\\.org/(?:abs|pdf)/([^?#]+)"
+    );
+    private static final Pattern ARXIV_VERSION_PATTERN = Pattern.compile(
+        "v\\d+$",
+        Pattern.CASE_INSENSITIVE
+    );
 
-    public PaperService(PaperRepository paperRepository, UserPaperRepository userPaperRepository) {
+    private final PaperRepository paperRepository;
+    private final PaperStatusProvider paperStatusProvider;
+    private final SecurityUtil securityUtil;
+
+    public PaperService(
+            PaperRepository paperRepository,
+            PaperStatusProvider paperStatusProvider,
+            SecurityUtil securityUtil) {
         this.paperRepository = paperRepository;
-        this.userPaperRepository = userPaperRepository;
+        this.paperStatusProvider = paperStatusProvider;
+        this.securityUtil = securityUtil;
     }
 
-    public Map<String, Object> search(String keyword, String tag, int page, int pageSize, Long userId) {
+    @Transactional(readOnly = true)
+    public PaperPageVO search(String keyword, String tag, int page, int pageSize) {
+        validatePageRequest(page, pageSize);
         Page<Paper> paperPage = paperRepository.findAll(
             PaperSpecification.searchBy(keyword, tag),
             PageRequest.of(page, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"))
         );
 
-        List<Long> paperIds = paperPage.getContent().stream()
-            .map(Paper::getId).collect(Collectors.toList());
-        Map<Long, UserPaper> userPaperMap = Collections.emptyMap();
-        if (userId != null && !paperIds.isEmpty()) {
-            userPaperMap = userPaperRepository.findByUserIdAndPaperIdIn(userId, paperIds)
-                .stream().collect(Collectors.toMap(UserPaper::getPaperId, up -> up, (a, b) -> a));
-        }
-
-        Map<Long, UserPaper> finalMap = userPaperMap;
-        List<PaperDTO> dtos = paperPage.getContent().stream().map(paper -> {
-            UserPaper up = finalMap.get(paper.getId());
-            return PaperDTO.fromEntity(paper,
-                up != null ? up.getFavorited() : false,
-                up != null ? up.getStarred() : false);
-        }).collect(Collectors.toList());
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("list", dtos);
-        result.put("total", paperPage.getTotalElements());
-        result.put("page", page);
-        result.put("pageSize", pageSize);
-        return result;
+        Map<Long, PaperUserStatus> statuses = loadCurrentUserStatuses(paperPage.getContent());
+        List<PaperDTO> papers = paperPage.getContent().stream()
+            .map(paper -> PaperDTO.fromEntity(
+                paper,
+                statuses.getOrDefault(paper.getId(), PaperUserStatus.NONE).favorited(),
+                statuses.getOrDefault(paper.getId(), PaperUserStatus.NONE).starred()
+            ))
+            .toList();
+        return new PaperPageVO(papers, paperPage.getTotalElements(), page, pageSize);
     }
 
-    public PaperDetailVO getById(Long paperId, Long userId) {
-        Paper paper = paperRepository.findById(paperId)
-            .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
-
-        UserPaper up = null;
-        if (userId != null) {
-            up = userPaperRepository.findByUserIdAndPaperId(userId, paperId).orElse(null);
-        }
-        return PaperDetailVO.fromEntity(paper,
-            up != null && up.getFavorited(),
-            up != null && up.getStarred());
+    @Transactional(readOnly = true)
+    public PaperDetailVO getById(Long paperId) {
+        Paper paper = requirePaper(paperId);
+        PaperUserStatus status = loadCurrentUserStatuses(List.of(paper))
+            .getOrDefault(paperId, PaperUserStatus.NONE);
+        return PaperDetailVO.fromEntity(paper, status.favorited(), status.starred());
     }
 
-    public PaperDTO importPaper(PaperImportRequest request, Long userId) {
-        Paper paper = new Paper();
-        paper.setTitle(request.getTitle());
-        paper.setAuthors(request.getAuthors());
-        paper.setPaperAbstract(request.getPaperAbstract());
-        paper.setCategory(request.getCategory());
-        paper.setPublishedAt(request.getPublishedAt());
-        paper.setArxivUrl(request.getArxivUrl());
-        paper.setTags(request.getTags());
+    @Transactional(readOnly = true)
+    public PaperDTO getSummaryById(Long paperId) {
+        return PaperDTO.fromEntity(requirePaper(paperId), false, false);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, PaperDTO> getSummariesByIds(Collection<Long> paperIds) {
+        if (paperIds == null || paperIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, PaperDTO> papers = new LinkedHashMap<>();
+        paperRepository.findAllById(paperIds).forEach(paper ->
+            papers.put(paper.getId(), PaperDTO.fromEntity(paper, false, false))
+        );
+        return papers;
+    }
+
+    @Transactional(readOnly = true)
+    public void requireExists(Long paperId) {
+        if (!paperRepository.existsById(paperId)) {
+            throw new PaperNotFoundException(paperId);
+        }
+    }
+
+    @Transactional
+    public PaperDTO importPaper(PaperImportRequest request) {
+        String arxivUrl = normalizeNullable(request.getArxivUrl());
+        String arxivId = extractArxivId(arxivUrl);
+        Optional<Paper> existingPaper = findExistingPaper(arxivId, arxivUrl);
+        if (existingPaper.isPresent()) {
+            return PaperDTO.fromEntity(existingPaper.get(), false, false);
+        }
+
+        Paper paper = Paper.builder()
+            .arxivId(arxivId)
+            .source(arxivId == null ? "manual" : "arxiv")
+            .sourceId(arxivId)
+            .title(request.getTitle().trim())
+            .authors(request.getAuthors().trim())
+            .paperAbstract(normalizeNullable(request.getPaperAbstract()))
+            .category(normalizeNullable(request.getCategory()))
+            .publishedAt(request.getPublishedAt())
+            .arxivUrl(arxivUrl)
+            .tags(normalizeNullable(request.getTags()))
+            .build();
+        return PaperDTO.fromEntity(paperRepository.save(paper), false, false);
+    }
+
+    @Transactional
+    public void updatePdfPath(Long paperId, String pdfPath) {
+        Paper paper = requirePaper(paperId);
+        paper.setPdfPath(pdfPath);
         paperRepository.save(paper);
+    }
 
-        if (userId != null) {
-            UserPaper up = new UserPaper();
-            up.setUserId(userId);
-            up.setPaperId(paper.getId());
-            up.setFavorited(true);
-            up.setStarred(false);
-            up.setImportedAt(LocalDateTime.now());
-            userPaperRepository.save(up);
+    private Paper requirePaper(Long paperId) {
+        return paperRepository.findById(paperId)
+            .orElseThrow(() -> new PaperNotFoundException(paperId));
+    }
+
+    private Optional<Paper> findExistingPaper(String arxivId, String arxivUrl) {
+        if (arxivId != null) {
+            Optional<Paper> byArxivId = paperRepository.findByArxivId(arxivId);
+            if (byArxivId.isPresent()) {
+                return byArxivId;
+            }
         }
+        return arxivUrl == null ? Optional.empty() : paperRepository.findByArxivUrl(arxivUrl);
+    }
 
-        return PaperDTO.fromEntity(paper, userId != null, false);
+    private Map<Long, PaperUserStatus> loadCurrentUserStatuses(Collection<Paper> papers) {
+        if (papers.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return securityUtil.getCurrentUser()
+            .map(user -> paperStatusProvider.findStatuses(
+                user.getId(),
+                papers.stream().map(Paper::getId).toList()
+            ))
+            .orElseGet(Collections::emptyMap);
+    }
+
+    private static String extractArxivId(String arxivUrl) {
+        if (arxivUrl == null) {
+            return null;
+        }
+        Matcher matcher = ARXIV_URL_PATTERN.matcher(arxivUrl);
+        if (!matcher.find()) {
+            return null;
+        }
+        String arxivId = matcher.group(1);
+        if (arxivId.toLowerCase().endsWith(".pdf")) {
+            arxivId = arxivId.substring(0, arxivId.length() - 4);
+        }
+        return ARXIV_VERSION_PATTERN.matcher(arxivId).replaceFirst("");
+    }
+
+    private static String normalizeNullable(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static void validatePageRequest(int page, int pageSize) {
+        if (page < 0) {
+            throw new IllegalArgumentException("Page must be zero or greater");
+        }
+        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException(
+                "Page size must be between 1 and " + MAX_PAGE_SIZE
+            );
+        }
     }
 }

@@ -9,10 +9,16 @@ import java.util.Optional;
 
 @Repository
 public interface AnnotationRepository extends JpaRepository<Annotation, Long> {
+    List<Annotation> findByUserIdAndPaperIdOrderByPageIndexAscStartOffsetAsc(
+        Long userId,
+        Long paperId
+    );
 
-    List<Annotation> findByUserIdAndPaperIdOrderByPageIndexAscStartOffsetAsc(Long userId, Long paperId);
-
-    Optional<Annotation> findByIdAndUserId(Long id, Long userId);
+    Optional<Annotation> findByIdAndUserIdAndPaperId(
+        Long id,
+        Long userId,
+        Long paperId
+    );
 
     void deleteByPaperId(Long paperId);
 }

@@ -1,13 +1,21 @@
 package com.papermate.paper.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
+@Getter
+@Setter
 public class PaperImportRequest {
     @NotBlank(message = "Title is required")
+    @Size(max = 2000, message = "Title must not exceed 2000 characters")
     private String title;
 
-    @NotBlank(message = "Authors is required")
+    @NotBlank(message = "Authors are required")
+    @Size(max = 5000, message = "Authors must not exceed 5000 characters")
     private String authors;
 
     private String paperAbstract;
@@ -15,19 +23,4 @@ public class PaperImportRequest {
     private LocalDate publishedAt;
     private String arxivUrl;
     private String tags;
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getAuthors() { return authors; }
-    public void setAuthors(String authors) { this.authors = authors; }
-    public String getPaperAbstract() { return paperAbstract; }
-    public void setPaperAbstract(String paperAbstract) { this.paperAbstract = paperAbstract; }
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-    public LocalDate getPublishedAt() { return publishedAt; }
-    public void setPublishedAt(LocalDate publishedAt) { this.publishedAt = publishedAt; }
-    public String getArxivUrl() { return arxivUrl; }
-    public void setArxivUrl(String arxivUrl) { this.arxivUrl = arxivUrl; }
-    public String getTags() { return tags; }
-    public void setTags(String tags) { this.tags = tags; }
 }

@@ -1,12 +1,33 @@
 package com.papermate.reader.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reading_progress")
+@Table(
+    name = "reading_progress",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "paper_id"})
+)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ReadingProgress {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,67 +38,54 @@ public class ReadingProgress {
     @Column(name = "paper_id", nullable = false)
     private Long paperId;
 
+    @Builder.Default
     @Column(name = "current_page", nullable = false)
     private Integer currentPage = 0;
 
+    @Builder.Default
     @Column(name = "total_pages", nullable = false)
     private Integer totalPages = 0;
 
+    @Builder.Default
+    @Column(name = "completed", nullable = false)
+    private Boolean completed = false;
+
+    @Builder.Default
     @Column(name = "progress_percentage", nullable = false)
     private Double progressPercentage = 0.0;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+        applyDefaults();
+    }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        applyDefaults();
     }
 
-    // ─── 构造器 ──────────────────────────────────────────────────────────
-
-    public ReadingProgress() {}
-
-    public ReadingProgress(Long id, Long userId, Long paperId, Integer currentPage,
-                           Integer totalPages, Double progressPercentage, LocalDateTime updatedAt) {
-        this.id = id;
-        this.userId = userId;
-        this.paperId = paperId;
-        this.currentPage = currentPage;
-        this.totalPages = totalPages;
-        this.progressPercentage = progressPercentage;
-        this.updatedAt = updatedAt;
+    private void applyDefaults() {
+        if (currentPage == null) {
+            currentPage = 0;
+        }
+        if (totalPages == null) {
+            totalPages = 0;
+        }
+        if (completed == null) {
+            completed = false;
+        }
+        if (progressPercentage == null) {
+            progressPercentage = 0.0;
+        }
     }
-
-    // ─── Getters ────────────────────────────────────────────────────────
-
-    public Long getId() { return id; }
-
-    public Long getUserId() { return userId; }
-
-    public Long getPaperId() { return paperId; }
-
-    public Integer getCurrentPage() { return currentPage; }
-
-    public Integer getTotalPages() { return totalPages; }
-
-    public Double getProgressPercentage() { return progressPercentage; }
-
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    // ─── Setters ────────────────────────────────────────────────────────
-
-    public void setId(Long id) { this.id = id; }
-
-    public void setUserId(Long userId) { this.userId = userId; }
-
-    public void setPaperId(Long paperId) { this.paperId = paperId; }
-
-    public void setCurrentPage(Integer currentPage) { this.currentPage = currentPage; }
-
-    public void setTotalPages(Integer totalPages) { this.totalPages = totalPages; }
-
-    public void setProgressPercentage(Double progressPercentage) { this.progressPercentage = progressPercentage; }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

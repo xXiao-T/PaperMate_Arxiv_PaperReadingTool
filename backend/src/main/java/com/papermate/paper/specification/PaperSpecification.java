@@ -6,27 +6,36 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-public class PaperSpecification {
+public final class PaperSpecification {
+    private PaperSpecification() {
+    }
 
     public static Specification<Paper> searchBy(String keyword, String tag) {
-        return (root, query, cb) -> {
+        return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (keyword != null && !keyword.isBlank()) {
-                String pattern = "%" + keyword.trim() + "%";
-                Predicate titleLike = cb.like(root.get("title"), pattern);
-                Predicate authorsLike = cb.like(root.get("authors"), pattern);
-                Predicate abstractLike = cb.like(root.get("paperAbstract"), pattern);
-                predicates.add(cb.or(titleLike, authorsLike, abstractLike));
+                String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("authors")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("paperAbstract")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("category")), pattern),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("tags")), pattern)
+                ));
             }
 
             if (tag != null && !tag.isBlank()) {
-                String tagPattern = "%" + tag.trim() + "%";
-                predicates.add(cb.like(root.get("tags"), tagPattern));
+                String tagPattern = "%" + tag.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("tags")),
+                    tagPattern
+                ));
             }
 
-            return cb.and(predicates.toArray(new Predicate[0]));
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         };
     }
 }

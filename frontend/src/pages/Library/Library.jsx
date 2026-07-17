@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { searchPapers, importPaper as importPaperApi } from "../../api/paperApi";
+import { searchPapers, importPaper as importPaperApi, uploadPaperPdf } from "../../api/paperApi";
 import "./Library.css";
 
 export default function Library() {
@@ -65,6 +65,11 @@ export default function Library() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      alert("阅读器仅支持 PDF 文件，请选择 .pdf 文献。");
+      e.target.value = "";
+      return;
+    }
     setSelectedFile(file);
     setMetaData({ title: file.name.replace(/\.[^.]+$/, ""), authors: "", publishedAt: "", abstract: "", arxivUrl: "" });
   };
@@ -80,7 +85,8 @@ export default function Library() {
         arxivUrl: metaData.arxivUrl,
         tags: ["import"].join(","),
       });
-      setPapers((prev) => [saved, ...prev]);
+      const pdfPath = await uploadPaperPdf(saved.id, selectedFile);
+      setPapers((prev) => [{ ...saved, pdfPath }, ...prev.filter((paper) => paper.id !== saved.id)]);
       setTotalCount((c) => c + 1);
     } catch (err) {
       alert("导入失败: " + (err.message || "unknown error"));
@@ -137,7 +143,7 @@ export default function Library() {
         </div>
         <div className="header-actions">
           <button className="btn-action btn-primary-blue import-button" onClick={openFilePicker}>导入文献</button>
-          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={handleFileChange} />
+          <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={handleFileChange} />
         </div>
       </header>
 
@@ -204,7 +210,7 @@ export default function Library() {
       {/* paper grid */}
       <div className="library-grid">
         {filteredPapers.map((paper) => (
-          <div key={paper.id} className="glass-panel library-card" style={{ padding: "24px 32px", cursor: "pointer" }} onClick={() => navigate(`/paper/${paper.id}`, { state: { ...paper, abstract: paper.paperAbstract } })}>
+          <div key={paper.id} className="glass-panel library-card" style={{ padding: "24px 32px", cursor: "pointer" }} onClick={() => navigate(`/paper/${paper.id}`, { state: { paper: { ...paper, abstract: paper.paperAbstract } } })}>
             <Star size={20} color="#fbbf24" fill={paper.starred ? "#fbbf24" : "none"} className="card-star-corner" onClick={(e) => toggleStar(paper.id, e)} />
             <div className="card-header" style={{ marginBottom: "16px" }}>
               <div>

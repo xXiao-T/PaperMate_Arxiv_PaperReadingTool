@@ -1,61 +1,67 @@
 package com.papermate.learning.entity;
 
-import com.papermate.auth.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
-@Table(name = "learning_stats")
+@Table(
+    name = "learning_stats",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "date"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class LearningStats {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
-    @Column(name = "total_papers_read")
+    @Column(name = "date", nullable = false)
+    private LocalDate date;
+
     @Builder.Default
-    private Integer totalPapersRead = 0;
+    @Column(name = "read_count", nullable = false)
+    private Integer readCount = 0;
 
-    @Column(name = "total_reading_time")
     @Builder.Default
-    private Long totalReadingTime = 0L;  // seconds
+    @Column(name = "deep_read_count", nullable = false)
+    private Integer deepReadCount = 0;
 
-    @Column(name = "total_notes")
     @Builder.Default
-    private Integer totalNotes = 0;
+    @Column(name = "reading_minutes", nullable = false)
+    private Long readingMinutes = 0L;
 
-    @Column(name = "papers_this_week")
-    @Builder.Default
-    private Integer papersThisWeek = 0;
-
-    @Column(name = "streak_days")
-    @Builder.Default
-    private Integer streakDays = 0;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    @PrePersist
+    protected void onCreate() {
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        if (readCount == null) {
+            readCount = 0;
+        }
+        if (deepReadCount == null) {
+            deepReadCount = 0;
+        }
+        if (readingMinutes == null) {
+            readingMinutes = 0L;
+        }
+    }
 }

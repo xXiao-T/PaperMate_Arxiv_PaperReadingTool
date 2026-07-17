@@ -3,11 +3,11 @@ server:
 
 spring:
   profiles:
-    active: local                         # 加载 application-local.yml（在 .gitignore 中，不含敏感信息）
+    active: local
   datasource:
     url: jdbc:mysql://localhost:3306/papermate?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: REPLACE_ME
+    password: 1083733188zyp
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -35,9 +35,8 @@ jwt:
   expiration: 86400000
 
 papermate:
-  jwt:
-    secret: REPLACE_ME
-    expiration-ms: 86400000
+  upload:
+    path: uploads/pdfs
   ai:
     api-key: sk-placeholder
     model: deepseek-v4-pro
