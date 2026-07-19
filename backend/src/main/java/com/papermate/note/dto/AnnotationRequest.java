@@ -1,45 +1,56 @@
 package com.papermate.note.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class AnnotationRequest {
-
-    @NotNull(message = "页码不能为空")
-    @Min(value = 0, message = "页码必须 >= 0")
+    @PositiveOrZero(message = "Page index must not be negative")
     private Integer pageIndex;
 
-    @NotNull(message = "起始偏移不能为空")
-    @Min(value = 0, message = "起始偏移必须 >= 0")
+    @PositiveOrZero(message = "Start offset must not be negative")
     private Integer startOffset;
 
-    @NotNull(message = "结束偏移不能为空")
-    @Min(value = 0, message = "结束偏移必须 >= 0")
+    @PositiveOrZero(message = "End offset must not be negative")
     private Integer endOffset;
 
-    @NotBlank(message = "选中原文不能为空")
+    @DecimalMin(value = "0.0", message = "PDF X must be at least 0")
+    @DecimalMax(value = "100.0", message = "PDF X must not exceed 100")
+    private Double pdfX;
+
+    @DecimalMin(value = "0.0", message = "PDF Y must be at least 0")
+    @DecimalMax(value = "100.0", message = "PDF Y must not exceed 100")
+    private Double pdfY;
+
+    @DecimalMin(value = "0.0", message = "PDF width must be at least 0")
+    @DecimalMax(value = "100.0", message = "PDF width must not exceed 100")
+    private Double pdfWidth;
+
+    @DecimalMin(value = "0.0", message = "PDF height must be at least 0")
+    @DecimalMax(value = "100.0", message = "PDF height must not exceed 100")
+    private Double pdfHeight;
+
+    @Size(max = 20000, message = "Selected text is too long")
     private String selectedText;
 
+    @Size(max = 20000, message = "Comment text is too long")
     private String commentText;
 
+    @Pattern(
+        regexp = "(?i)highlight|underline|comment|note",
+        message = "Unsupported annotation type"
+    )
     private String annotationType;
 
+    @Pattern(
+        regexp = "^#[0-9A-Fa-f]{6}$",
+        message = "Color must use #RRGGBB format"
+    )
     private String color;
-
-    // Getters and Setters
-    public Integer getPageIndex() { return pageIndex; }
-    public void setPageIndex(Integer pageIndex) { this.pageIndex = pageIndex; }
-    public Integer getStartOffset() { return startOffset; }
-    public void setStartOffset(Integer startOffset) { this.startOffset = startOffset; }
-    public Integer getEndOffset() { return endOffset; }
-    public void setEndOffset(Integer endOffset) { this.endOffset = endOffset; }
-    public String getSelectedText() { return selectedText; }
-    public void setSelectedText(String selectedText) { this.selectedText = selectedText; }
-    public String getCommentText() { return commentText; }
-    public void setCommentText(String commentText) { this.commentText = commentText; }
-    public String getAnnotationType() { return annotationType; }
-    public void setAnnotationType(String annotationType) { this.annotationType = annotationType; }
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
 }

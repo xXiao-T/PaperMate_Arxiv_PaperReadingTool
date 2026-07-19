@@ -8,18 +8,17 @@ import com.papermate.fetch.entity.FetchTask;
 import com.papermate.fetch.repository.FetchTaskRepository;
 import com.papermate.library.entity.UserPaper;
 import com.papermate.library.repository.UserPaperRepository;
-import com.papermate.paper.entity.Paper;
-import com.papermate.paper.repository.PaperRepository;
+import com.papermate.paper.dto.PaperDTO;
+import com.papermate.paper.dto.PaperImportRequest;
+import com.papermate.paper.service.PaperService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,18 +38,18 @@ public class FetchService {
 
     private final FetchTaskRepository taskRepo;
     private final ArxivClient arxivClient;
-    private final PaperRepository paperRepo;
+    private final PaperService paperService;
     private final UserPaperRepository userPaperRepo;
     private final UserRepository userRepo;
 
     public FetchService(FetchTaskRepository taskRepo,
                         ArxivClient arxivClient,
-                        PaperRepository paperRepo,
+                        PaperService paperService,
                         UserPaperRepository userPaperRepo,
                         UserRepository userRepo) {
         this.taskRepo = taskRepo;
         this.arxivClient = arxivClient;
-        this.paperRepo = paperRepo;
+        this.paperService = paperService;
         this.userPaperRepo = userPaperRepo;
         this.userRepo = userRepo;
     }
@@ -187,38 +186,31 @@ public class FetchService {
 
     /** 尝试导入一篇论文，已存在则跳过。返回 true 表示成功入库。 */
     private boolean tryImport(ArxivClient.ArxivPaper ap, FetchTask task) {
-        // 去重：按 arxivId 查是否已存在
-        if (paperRepo.findOne(arxivIdSpec(ap.getArxivId())).isPresent()) {
-            log.debug("Paper already exists, skipped: arxivId={}", ap.getArxivId());
-            return false;
-        }
-
         try {
-            // 构建 Paper 实体
-            Paper paper = Paper.builder()
-                    .arxivId(ap.getArxivId())
-                    .source("arxiv_fetch")
-                    .sourceId("arxiv:" + ap.getArxivId())
-                    .title(ap.getTitle())
-                    .authors(ap.getAuthors())
-                    .paperAbstract(ap.getSummary())
-                    .category(ap.getCategory())
-                    .publishedAt(ap.getPublishedAt())
-                    .arxivUrl(ap.getArxivUrl())
-                    .tags(task.getAutoTags())   // 应用任务的自动标签
-                    .parseStatus("IMPORTED")
-                    .build();
+            // 构建请求（PaperService.importPaper 内置去重逻辑）
+            PaperImportRequest req = new PaperImportRequest();
+            req.setTitle(ap.getTitle());
+            req.setAuthors(ap.getAuthors());
+            req.setPaperAbstract(ap.getSummary());
+            req.setCategory(ap.getCategory());
+            req.setPublishedAt(ap.getPublishedAt());
+            req.setArxivUrl(ap.getArxivUrl());
+            req.setTags(task.getAutoTags());  // 应用任务的自动标签
 
-            paper = paperRepo.save(paper);
+            PaperDTO paper = paperService.importPaper(req);
 
             // 建立用户-论文关联（标记为收藏）
-            UserPaper up = new UserPaper();
-            up.setUserId(task.getUser().getId());
-            up.setPaperId(paper.getId());
-            up.setFavorited(true);
-            up.setStarred(false);
-            up.setImportedAt(LocalDateTime.now());
-            userPaperRepo.save(up);
+            Long userId = task.getUser().getId();
+            boolean alreadyLinked = userPaperRepo.findByUserIdAndPaperId(userId, paper.getId()).isPresent();
+            if (!alreadyLinked) {
+                UserPaper up = new UserPaper();
+                up.setUserId(userId);
+                up.setPaperId(paper.getId());
+                up.setFavorited(true);
+                up.setStarred(false);
+                up.setImportedAt(LocalDateTime.now());
+                userPaperRepo.save(up);
+            }
 
             log.debug("Paper imported: arxivId={}, title=\"{}\"", ap.getArxivId(), ap.getTitle());
             return true;
@@ -286,8 +278,4 @@ public class FetchService {
         return LocalDateTime.of(baseDate, LocalTime.of(hour, 0));
     }
 
-    /** 按 arxivId 精确查找 Specification。 */
-    private Specification<Paper> arxivIdSpec(String arxivId) {
-        return (root, query, cb) -> cb.equal(root.get("arxivId"), arxivId);
-    }
 }

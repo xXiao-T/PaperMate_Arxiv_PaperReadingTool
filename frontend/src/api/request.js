@@ -14,10 +14,11 @@ export function setToken(token) {
 
 export async function apiFetch(path, options = {}) {
   const token = getToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const isFormData = options.body instanceof FormData;
+  const headers = { ...options.headers };
+  if (!isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

@@ -10,6 +10,12 @@ import java.util.Optional;
 @Repository
 public interface UserPaperRepository extends JpaRepository<UserPaper, Long> {
     List<UserPaper> findByUserId(Long userId);
+
     Optional<UserPaper> findByUserIdAndPaperId(Long userId, Long paperId);
+
     List<UserPaper> findByUserIdAndPaperIdIn(Long userId, List<Long> paperIds);
+
+    List<UserPaper> findByUserIdAndFavoritedTrueOrderByImportedAtDesc(Long userId);
+
+    List<UserPaper> findByUserIdOrderByImportedAtDesc(Long userId);
 }

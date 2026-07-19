@@ -1,17 +1,24 @@
 package com.papermate.reader.controller;
 
 import com.papermate.common.Result;
+import com.papermate.paper.exception.PaperNotFoundException;
 import com.papermate.reader.dto.ProgressDTO;
 import com.papermate.reader.service.ReaderService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/papers/{paperId}/progress")
 public class ReaderController {
-
     private final ReaderService readerService;
 
-    // 手动构造器（替代 @RequiredArgsConstructor）
     public ReaderController(ReaderService readerService) {
         this.readerService = readerService;
     }
@@ -26,6 +33,14 @@ public class ReaderController {
             @PathVariable Long paperId,
             @RequestParam Integer currentPage,
             @RequestParam Integer totalPages) {
-        return Result.success(readerService.saveProgress(paperId, currentPage, totalPages));
+        return Result.success(
+            readerService.saveProgress(paperId, currentPage, totalPages)
+        );
+    }
+
+    @ExceptionHandler(PaperNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Result<Void> handlePaperNotFound(PaperNotFoundException exception) {
+        return Result.notFound(exception.getMessage());
     }
 }

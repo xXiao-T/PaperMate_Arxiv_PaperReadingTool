@@ -186,8 +186,19 @@
   color: #94a3b8;
   font-style: italic;
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 0;
+}
+
+/* 思考中弹跳点 */
+.cb-dot-bounce {
+  display: inline-block;
+  animation: cb-dot-bounce 1.2s ease-in-out infinite;
+}
+@keyframes cb-dot-bounce {
+  0%, 100% { opacity: 0.15; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+  60% { opacity: 0.4; transform: translateY(0); }
 }
 
 /* 错误文字 */

@@ -1,10 +1,10 @@
-.reader-layout { display: flex; gap: 16px; height: calc(100vh - 120px); }
-.reader-notes { display: flex; flex: 1; gap: 16px; }
+.reader-layout { display: flex; gap: 16px; flex: 1; min-height: 0; }
+.reader-notes { display: flex; flex: 1; gap: 16px; min-height: 0; }
 .reader-notes-panel {
   flex: 0 0 300px;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   transition: flex-basis 0.3s ease;
 }
 .reader-notes-panel-collapsed {
@@ -14,22 +14,34 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
 }
 .reader-main {
-  flex: 7; background: #fff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-  display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);
+  flex: 1;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.05);
+  min-width: 0;
 }
 
 /* PDF 查看区容器（支持双列） */
 .reader-main-area {
-  flex: 7;
+  flex: 1;
   display: flex;
   gap: 12px;
+  min-width: 0;
+  overflow: hidden;
 }
 .reader-main-split {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 单列模式下的 + 按钮区域 */
@@ -213,3 +225,126 @@
 .reader-current-paper::before {
   display: none !important;
 }
+
+/* ============================================
+    AI 对话面板（内联在 Reader 中）
+   ============================================ */
+
+.reader-ai-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.chat-panel-top {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 18px 16px 0;
+}
+
+.chat-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+  scroll-behavior: smooth;
+}
+
+.chat-input-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 8px;
+  flex-shrink: 0;
+}
+
+.chat-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.6);
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+.chat-action-button:hover:not(:disabled) {
+  background: rgba(219, 234, 254, 0.8);
+}
+.chat-action-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chat-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+.chat-input-wrapper .form-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  font-size: 13.5px;
+  color: #334155;
+  background: #f8fafc;
+  outline: none;
+  margin-bottom: 0;
+}
+.chat-input-wrapper .form-input:focus {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+.chat-input-wrapper .form-input::placeholder {
+  color: #94a3b8;
+}
+.chat-send-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.chat-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25);
+}
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* react-pdf canvas 强制约束 */
+.react-pdf__Page__canvas { width: 100% !important; height: auto !important; }
+.react-pdf__Document { width: 100%; }
+.react-pdf__Page { width: 100% !important; }

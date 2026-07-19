@@ -19,3 +19,12 @@ export function importPaper(paperData) {
     body: JSON.stringify(paperData),
   });
 }
+
+export function uploadPaperPdf(paperId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetch(`/api/papers/${paperId}/upload-pdf`, {
+    method: 'POST',
+    body: formData,
+  });
+}
