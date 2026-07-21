@@ -129,16 +129,15 @@ public class PaperController {
             if (!filePath.startsWith(uploadDirectory) || !Files.isRegularFile(filePath)) {
                 return ResponseEntity.notFound().build();
             }
+            byte[] content = Files.readAllBytes(filePath);
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(
-                    HttpHeaders.CONTENT_DISPOSITION,
-                    ContentDisposition.inline()
-                        .filename("paper-" + paperId + ".pdf")
-                        .build()
-                        .toString()
-                )
-                .body(Files.readAllBytes(filePath));
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                    ContentDisposition.inline().filename("paper-" + paperId + ".pdf").build().toString())
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=604800, immutable")
+                .header(HttpHeaders.ETAG, "\"" + paper.getPdfPath().hashCode() + "\"")
+                .contentLength(content.length)
+                .body(content);
         } catch (IOException exception) {
             log.error("Failed to read PDF for paper {}", paperId, exception);
             return ResponseEntity.internalServerError().build();
@@ -165,13 +164,15 @@ public class PaperController {
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 return ResponseEntity.status(responseCode).build();
             }
+            byte[] content = connection.getInputStream().readAllBytes();
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(
-                    HttpHeaders.CONTENT_DISPOSITION,
-                    ContentDisposition.inline().filename("paper.pdf").build().toString()
-                )
-                .body(connection.getInputStream().readAllBytes());
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                    ContentDisposition.inline().filename("paper.pdf").build().toString())
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .header(HttpHeaders.ETAG, "\"" + url.hashCode() + "\"")
+                .contentLength(content.length)
+                .body(content);
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(exception.getMessage());
         } catch (IOException exception) {

@@ -1,5 +1,6 @@
 package com.papermate.fetch.service;
 
+import com.papermate.common.utils.ArxivRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,10 @@ public class ArxivClient {
         int count = Math.min(Math.max(maxResults, 1), 100);
 
         log.info("arXiv search: query=\"{}\", max_results={}", query, count);
+        if (!ArxivRateLimiter.tryAcquire()) {
+            log.warn("arXiv rate limited, skipping: query=\"{}\"", query);
+            return Collections.emptyList();
+        }
 
         try {
             String uri = UriComponentsBuilder.fromPath("")

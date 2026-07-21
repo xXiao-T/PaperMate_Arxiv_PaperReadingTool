@@ -11,4 +11,8 @@ public interface ReadingProgressRepository extends JpaRepository<ReadingProgress
     Optional<ReadingProgress> findByUserIdAndPaperId(Long userId, Long paperId);
 
     long countByUserIdAndCompletedTrue(Long userId);
+
+    java.util.List<ReadingProgress> findByUserIdAndUpdatedAtAfter(Long userId, java.time.LocalDateTime since);
+
+    java.util.List<ReadingProgress> findByUserId(Long userId);
 }

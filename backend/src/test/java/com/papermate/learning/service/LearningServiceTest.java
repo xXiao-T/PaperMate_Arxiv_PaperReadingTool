@@ -6,6 +6,8 @@ import com.papermate.learning.entity.LearningStats;
 import com.papermate.learning.repository.LearningStatsRepository;
 import com.papermate.library.dto.LibraryPaperVO;
 import com.papermate.library.service.LibraryService;
+import com.papermate.ai.service.LLMClient;
+import com.papermate.reader.repository.ReadingProgressRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +36,9 @@ class LearningServiceTest {
     void setUp() {
         learningService = new LearningService(
             learningStatsRepository,
-            libraryService
+            libraryService,
+            null,
+            null
         );
     }
 

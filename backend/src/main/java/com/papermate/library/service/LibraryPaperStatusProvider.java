@@ -42,14 +42,13 @@ public class LibraryPaperStatusProvider implements PaperStatusProvider {
     @Override
     @Transactional
     public void ensureLinked(Long userId, Long paperId) {
-        if (userPaperRepository.findByUserIdAndPaperId(userId, paperId).isEmpty()) {
-            UserPaper up = UserPaper.builder()
-                .userId(userId)
-                .paperId(paperId)
-                .favorited(true)
-                .starred(false)
-                .build();
-            userPaperRepository.save(up);
+        UserPaper up = userPaperRepository.findByUserIdAndPaperId(userId, paperId)
+            .orElseGet(() -> UserPaper.builder()
+                .userId(userId).paperId(paperId).favorited(true).starred(false).build());
+        if (!Boolean.TRUE.equals(up.getFavorited())) {
+            up.setFavorited(true);
+            up.setImportedAt(java.time.LocalDateTime.now());
         }
+        userPaperRepository.save(up);
     }
 }

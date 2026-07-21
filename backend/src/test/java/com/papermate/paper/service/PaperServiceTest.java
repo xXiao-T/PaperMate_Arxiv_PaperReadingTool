@@ -47,7 +47,10 @@ class PaperServiceTest {
         paperService = new PaperService(
             paperRepository,
             paperStatusProvider,
-            securityUtil
+            securityUtil,
+            null,
+            null,
+            null
         );
     }
 

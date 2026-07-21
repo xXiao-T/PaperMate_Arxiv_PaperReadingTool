@@ -26,6 +26,27 @@ export default function Search() {
   const inputRef = useRef(null);
   const isInitialMount = useRef(true);
 
+  // 刷页恢复搜索状态
+  useEffect(() => {
+    const saved = sessionStorage.getItem('search_state');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        if (s.query) {
+          setQuery(s.query);
+          setSearchType(s.searchType || 'all');
+          setResults(s.results || []);
+          setTotal(s.total || 0);
+          setHasSearched(s.hasSearched || false);
+        }
+      } catch {}
+    }
+  }, []);
+
+  const saveSearchState = (q, st, r, t, hs) => {
+    try { sessionStorage.setItem('search_state', JSON.stringify({ query: q, searchType: st, results: r, total: t, hasSearched: hs })); } catch {}
+  };
+
   const addHistory = (searchText) => {
     setHistory((prev) => [searchText, ...prev.filter((item) => item !== searchText)].slice(0, 10));
   };
@@ -39,6 +60,7 @@ export default function Search() {
       const data = await searchArxiv(searchText, searchType, 30, sortByVal, sortOrderVal, cat);
       setResults(data.list || []);
       setTotal(data.total || 0);
+      saveSearchState(searchText, searchType, data.list || [], data.total || 0, true);
     } catch {
       setResults([]);
       setTotal(0);
@@ -80,6 +102,8 @@ export default function Search() {
   const clearCategory = () => { setCategoryFilter(''); doSearch(query.trim(), ''); };
   const handleSave = async (paper, e) => {
     e.stopPropagation();
+    const btn = e.currentTarget;
+    btn.disabled = true;
     try {
       await importPaper({
         title: paper.title,
@@ -92,7 +116,9 @@ export default function Search() {
       });
       setSavedPapers(prev => ({ ...prev, [paper.id]: true }));
     } catch (err) {
-      console.error('Save failed:', err);
+      console.error('入库失败:', err);
+    } finally {
+      btn.disabled = false;
     }
   };
 
@@ -141,7 +167,7 @@ export default function Search() {
                       <AuthorLine authors={paper.authors} paperId={paper.id} expanded={expandedAuthors[paper.id]} onToggle={() => setExpandedAuthors(prev => ({ ...prev, [paper.id]: !prev[paper.id] }))} />
                       {paper.publishedAt && (<><span className='meta-dot'></span><span className='search-result-date'><Calendar size={13} />{paper.publishedAt}</span></>)}
                     </div>
-                    {paper.paperAbstract && (<p className='search-result-abstract'><MathText text={paper.paperAbstract} /></p>)}
+                    {paper.paperAbstract && (<div className='search-result-abstract'><MathText text={paper.paperAbstract} /></div>)}
                     {paper.tags && paper.tags.length > 0 && (<div className='search-result-tags'>{paper.tags.map((tag) => (<span key={tag} className={'tag search-tag search-tag-clickable'+(categoryFilter===tag?' search-tag-active':'')} onClick={(e) => { e.stopPropagation(); handleFilterCategory(tag); }} title={'搜索分类: '+tag}>{tag}</span>))}</div>)}
                   </div>
                   <div className='search-result-right'>

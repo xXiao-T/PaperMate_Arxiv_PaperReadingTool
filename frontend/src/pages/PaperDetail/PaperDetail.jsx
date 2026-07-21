@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Play, ExternalLink, MessageSquare, Tag, Trash2, Edit2, Plus } from 'lucide-react';
 import { getComments, createComment, updateComment, deleteComment } from '../../api/commentApi';
 import { apiFetch } from '../../api/request';
+import useTagColors from '../../hooks/useTagColors';
 import './PaperDetail.css';
 import '../Library/Library.css';
 
@@ -33,9 +34,16 @@ export default function PaperDetail() {
 
   const commentSectionRef = useRef(null);
 
-  const ALL_TAGS = ['自然语言处理', 'Transformer', '预训练模型', '计算机视觉', '深度学习', '机器学习', '主题模型', '导入文献'];
+  const defaultTags = ['星标', '导入文献'];
+  const [allTags, setAllTags] = useState(defaultTags);
+  // ─── 加载标签列表 ──────────────────────────────────────────────────
+  useEffect(() => {
+    apiFetch('/api/tags').then(tags => {
+      const names = (tags || []).map(t => t.name);
+      setAllTags([...new Set([...defaultTags, ...names])]);
+    }).catch(() => {});
+  }, [paper?.id]);
 
-  // ─── 加载评论 ──────────────────────────────────────────────────────
 
   useEffect(() => {
     if (paper?.id) {
@@ -54,7 +62,7 @@ export default function PaperDetail() {
 
   // ─── 标签功能 ──────────────────────────────────────────────────────
 
-  const availableTags = ALL_TAGS.filter((t) => !paperTags.includes(t));
+  const availableTags = allTags.filter((t) => !paperTags.includes(t));
 
   const saveTags = async (tags) => {
     try {
@@ -96,18 +104,10 @@ export default function PaperDetail() {
 
   // ─── 评论 CRUD ─────────────────────────────────────────────────────
 
-  const hashStringToColor = (text) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      hash &= hash;
-    }
-    const hue = Math.abs(hash) % 360;
-    return {
-      backgroundColor: `hsl(${hue}, 60%, 90%)`,
-      color: `hsl(${hue}, 60%, 25%)`,
-      borderColor: `hsla(${hue}, 60%, 55%, 0.5)`,
-    };
+  const getTagColor = useTagColors();
+  const tagStyle = (name) => {
+    const c = getTagColor(name);
+    return { backgroundColor: c, color: c.replace('90%', '25%'), borderColor: c.replace('90%', '55%') };
   };
 
   // ─── 创建评论 ──────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ export default function PaperDetail() {
             <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '32px' }}>
               <div className="library-tag-bar" style={{ gap: '8px' }}>
                 {paperTags.map((tag) => (
-                  <div key={tag} className="tag tag-chip tag-chip-tag" style={hashStringToColor(tag)}>
+                  <div key={tag} className="tag tag-chip tag-chip-tag" style={tagStyle(tag)}>
                     <span>{tag}</span>
                     <button
                       type="button"
@@ -414,7 +414,7 @@ export default function PaperDetail() {
                       <div
                         key={tag}
                         className={`tag tag-chip tag-chip-tag tag-chip-action ${isSelected ? 'tag-chip-active' : ''}`}
-                        style={isSelected ? hashStringToColor(tag) : { opacity: 0.6 }}
+                        style={isSelected ? tagStyle(tag) : { opacity: 0.6 }}
                         onClick={() => toggleModalTag(tag)}
                       >
                         <span>{tag}</span>

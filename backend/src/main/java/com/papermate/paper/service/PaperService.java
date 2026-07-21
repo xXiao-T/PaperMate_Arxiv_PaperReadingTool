@@ -38,14 +38,23 @@ public class PaperService {
     private final PaperRepository paperRepository;
     private final PaperStatusProvider paperStatusProvider;
     private final SecurityUtil securityUtil;
+    private final com.papermate.tag.repository.TagRepository tagRepo;
+    private final com.papermate.tag.repository.PaperTagRepository paperTagRepo;
+    private final jakarta.persistence.EntityManager em;
 
     public PaperService(
             PaperRepository paperRepository,
             PaperStatusProvider paperStatusProvider,
-            SecurityUtil securityUtil) {
+            SecurityUtil securityUtil,
+            com.papermate.tag.repository.TagRepository tagRepo,
+            com.papermate.tag.repository.PaperTagRepository paperTagRepo,
+            jakarta.persistence.EntityManager em) {
         this.paperRepository = paperRepository;
         this.paperStatusProvider = paperStatusProvider;
         this.securityUtil = securityUtil;
+        this.tagRepo = tagRepo;
+        this.paperTagRepo = paperTagRepo;
+        this.em = em;
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +132,8 @@ public class PaperService {
                 .build();
             paper = paperRepository.save(paper);
         }
+        // 自动创建标签并关联到论文
+        syncTags(paper, request.getTags(), request.getCategory());
         // 将论文关联到当前用户（收藏），刷页不丢失
         try {
             Long userId = securityUtil.getCurrentUserId();
@@ -192,6 +203,44 @@ public class PaperService {
 
     private static String normalizeNullable(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaperService.class);
+
+    /** 自动创建标签（如果不存在）并关联到论文 */
+    private void syncTags(Paper paper, String tags, String category) {
+        List<String> names = new java.util.ArrayList<>();
+        if (tags != null) {
+            for (String t : tags.split("[,\\s]+")) {
+                String n = t.trim();
+                if (!n.isEmpty()) names.add(n);
+            }
+        }
+        if (category != null && !category.isBlank()) {
+            names.add(category.trim());
+        }
+        log.info("syncTags: paperId={}, tags={}, category={}, names={}", paper.getId(), tags, category, names);
+        for (String name : names) {
+            com.papermate.tag.entity.Tag tag = tagRepo.findByName(name)
+                .orElseGet(() -> tagRepo.save(
+                    com.papermate.tag.entity.Tag.builder()
+                        .name(name)
+                        .color(hashTagColor(name))
+                        .build()
+                ));
+            com.papermate.tag.entity.PaperTag pt = new com.papermate.tag.entity.PaperTag();
+            pt.setPaper(paper);
+            pt.setTag(tag);
+            if (!paperTagRepo.existsByPaperIdAndTagId(paper.getId(), tag.getId())) {
+                paperTagRepo.save(pt);
+            }
+        }
+    }
+
+    private static String hashTagColor(String name) {
+        int hash = 0;
+        for (int i = 0; i < name.length(); i++) hash = name.charAt(i) + ((hash << 5) - hash);
+        return String.format("hsl(%d, 60%%, 90%%)", Math.abs(hash) % 360);
     }
 
     private static void validatePageRequest(int page, int pageSize) {

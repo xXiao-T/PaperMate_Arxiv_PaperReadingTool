@@ -29,6 +29,17 @@ public class TagService {
         this.tagRepository = tagRepository;
         this.paperTagRepository = paperTagRepository;
         this.entityManager = entityManager;
+        backfillColors();
+    }
+
+    /** 给存量无颜色的 tag 补色 */
+    private void backfillColors() {
+        List<Tag> colorless = tagRepository.findByColorIsNull();
+        for (Tag tag : colorless) {
+            tag.setColor(hashToColor(tag.getName()));
+            tagRepository.save(tag);
+            log.info("Tag color backfilled: id={}, name={}, color={}", tag.getId(), tag.getName(), tag.getColor());
+        }
     }
 
     /** Get all tags with paper count. */
@@ -40,6 +51,7 @@ public class TagService {
                     return TagDTO.builder()
                             .id(tag.getId())
                             .name(tag.getName())
+                            .color(tag.getColor())
                             .paperCount(count)
                             .build();
                 })
@@ -52,13 +64,25 @@ public class TagService {
         if (tagRepository.existsByName(name)) {
             throw new IllegalArgumentException("标签 '" + name + "' 已存在");
         }
-        Tag tag = tagRepository.save(Tag.builder().name(name).build());
-        log.info("Tag created: id={}, name={}", tag.getId(), tag.getName());
+        String color = hashToColor(name);
+        Tag tag = tagRepository.save(Tag.builder().name(name).color(color).build());
+        log.info("Tag created: id={}, name={}, color={}", tag.getId(), tag.getName(), color);
         return TagDTO.builder()
                 .id(tag.getId())
                 .name(tag.getName())
+                .color(color)
                 .paperCount(0L)
                 .build();
+    }
+
+    /** 根据标签名哈希生成稳定的 HSL 颜色 */
+    static String hashToColor(String name) {
+        int hash = 0;
+        for (int i = 0; i < name.length(); i++) {
+            hash = name.charAt(i) + ((hash << 5) - hash);
+        }
+        int hue = Math.abs(hash) % 360;
+        return String.format("hsl(%d, 60%%, 90%%)", hue);
     }
 
     /** Delete a tag and all its paper associations. */
@@ -81,7 +105,8 @@ public class TagService {
                 .map(pt -> TagDTO.builder()
                         .id(pt.getTag().getId())
                         .name(pt.getTag().getName())
-                        .paperCount(null) // Not needed for per-paper view
+                        .color(pt.getTag().getColor())
+                        .paperCount(null)
                         .build())
                 .toList();
     }

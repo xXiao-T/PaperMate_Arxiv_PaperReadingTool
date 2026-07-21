@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
+import { Star, CheckSquare, Layers, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { searchPapers, importPaper as importPaperApi, uploadPaperPdf } from "../../api/paperApi";
-import { getFavorites, toggleStar as toggleStarApi } from "../../api/libraryApi";
+import { apiFetch } from "../../api/request";
+import { getFavorites, toggleStar as toggleStarApi, removeFavorite } from "../../api/libraryApi";
+import useTagColors from "../../hooks/useTagColors";
 import "./Library.css";
 
 export default function Library() {
@@ -11,9 +13,13 @@ export default function Library() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [tags, setTags] = useState(["NLP", "Transformer", "Computer Vision"]);
+  const [tags, setTags] = useState([]);
   const [metaData, setMetaData] = useState({ title: "", authors: "", publishedAt: "", abstract: "", arxivUrl: "" });
   const fileInputRef = useRef(null);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [deleteConfirmPending, setDeleteConfirmPending] = useState(false);
+  const deleteTimerRef = useRef(null);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagText, setNewTagText] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
@@ -27,6 +33,9 @@ export default function Library() {
       const data = await getFavorites();
       setPapers(data || []);
       setTotalCount((data || []).length);
+      const allTags = new Set();
+      (data || []).forEach(p => (p.tags || []).forEach(t => allTags.add(t)));
+      setTags([...allTags].sort());
     } catch (err) {
       console.error("Failed to fetch favorites:", err);
     } finally {
@@ -46,7 +55,7 @@ export default function Library() {
   const addTag = (tagToAdd) => {
     const n = tagToAdd.trim();
     if (!n || tags.includes(n)) return false;
-    setTags((prev) => [...prev, n]);
+    setTags([...new Set([...tags, n])]);
     return true;
   };
 
@@ -55,9 +64,16 @@ export default function Library() {
     setNewTagText(""); setAddingTag(false);
   };
 
-  const removeTag = (tagToRemove) => {
-    setTags((prev) => prev.filter((t) => t !== tagToRemove));
-    setPapers((prev) => prev.map((p) => ({ ...p, tags: p.tags.filter((t) => t !== tagToRemove) })));
+  const removeTag = async (tagToRemove) => {
+    // 从所有论文中删除该标签
+    const updated = papers.filter(p => (p.tags || []).includes(tagToRemove));
+    for (const p of updated) {
+      const newTags = p.tags.filter(t => t !== tagToRemove).join(',');
+      try { await apiFetch(`/api/papers/${p.id}/tags`, { method: 'PUT', body: JSON.stringify({ tags: newTags }) }); } catch {}
+    }
+    setPapers(prev => prev.map(p => ({ ...p, tags: (p.tags || []).filter(t => t !== tagToRemove) })));
+    setTags(tags.filter(t => t !== tagToRemove));
+    setActiveFilters(prev => prev.filter(f => f !== tagToRemove));
   };
 
   // ---- import ----
@@ -84,7 +100,7 @@ export default function Library() {
         paperAbstract: metaData.abstract,
         publishedAt: metaData.publishedAt,
         arxivUrl: metaData.arxivUrl,
-        tags: ["import"].join(","),
+        tags: "导入文献",
       });
       const pdfPath = await uploadPaperPdf(saved.id, selectedFile);
       setPapers((prev) => [{ ...saved, pdfPath }, ...prev.filter((paper) => paper.id !== saved.id)]);
@@ -110,17 +126,13 @@ export default function Library() {
     }
   };
 
-  // ---- tag colors ----
-  const hashStringToColor = (text, isActive) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) { hash = text.charCodeAt(i) + ((hash << 5) - hash); hash &= hash; }
-    const hue = Math.abs(hash) % 360, s = 50;
-    return isActive
-      ? { backgroundColor: `hsl(${hue},${s}%,90%)`, color: `hsl(${hue},${s}%,25%)`, borderColor: `hsla(${hue},${s}%,55%,0.8)` }
-      : { backgroundColor: `hsl(${hue},${s}%,93%)`, color: `hsla(${hue},${s}%,50%,0.65)`, borderColor: `hsla(${hue},${s}%,70%,0.45)` };
+  // ---- tag colors (from DB) ----
+  const getTagColor = useTagColors();
+  const getTagStyle = (tag) => {
+    if (tag === '+') return {};
+    const c = getTagColor(tag);
+    return { backgroundColor: c, color: c.replace('90%', '25%'), borderColor: c.replace('90%', '78%') };
   };
-
-  const getTagStyle = (tag, active = false) => (tag === "+" ? {} : hashStringToColor(tag, active));
 
   // ---- filtered papers ----
   const filteredPapers = (() => {
@@ -139,6 +151,32 @@ export default function Library() {
     return result;
   })();
 
+  // ---- 多选 ----
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredPapers.length) setSelectedIds([]);
+    else setSelectedIds(filteredPapers.map(p => p.id));
+  };
+  const toggleSelectId = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+  const handleDeleteSelected = async () => {
+    if (!deleteConfirmPending) {
+      setDeleteConfirmPending(true);
+      deleteTimerRef.current = setTimeout(() => setDeleteConfirmPending(false), 3000);
+      return;
+    }
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirmPending(false);
+    try {
+      for (const id of selectedIds) {
+        await removeFavorite(id);
+      }
+      await fetchPapers();
+      setSelectedIds([]);
+      setMultiSelectMode(false);
+    } catch { /* 静默 */ }
+  };
+
   // ---- render ----
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -148,6 +186,24 @@ export default function Library() {
           <p className="page-subtitle">{loading ? "加载中…" : `共收藏 ${totalCount} papers`}</p>
         </div>
         <div className="header-actions">
+          <button
+            className={`btn-action btn-multi-select${multiSelectMode ? ' btn-multi-select-active' : ''}`}
+            onClick={() => { setMultiSelectMode(prev => !prev); setSelectedIds([]); setDeleteConfirmPending(false); }}
+          >
+            <CheckSquare size={14} /> {multiSelectMode ? '取消多选' : '多选'}
+          </button>
+          {multiSelectMode && (
+            <>
+              <span className={`select-all-icon${selectedIds.length === filteredPapers.length ? ' select-all-icon-active' : ''}`} onClick={toggleSelectAll} title="全选">
+                <Layers size={14} />
+              </span>
+              {selectedIds.length > 0 && (
+                <button className={`btn-action btn-delete-selected${deleteConfirmPending ? ' btn-delete-confirm' : ''}`} onClick={handleDeleteSelected}>
+                  <Trash2 size={14} /> {deleteConfirmPending ? '确认删除' : '删除'}
+                </button>
+              )}
+            </>
+          )}
           <button className="btn-action btn-primary-blue import-button" onClick={openFilePicker}>导入文献</button>
           <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={handleFileChange} />
         </div>
@@ -215,8 +271,18 @@ export default function Library() {
 
       {/* paper grid */}
       <div className="library-grid">
-        {filteredPapers.map((paper) => (
-          <div key={paper.id} className="glass-panel library-card" style={{ padding: "24px 32px", cursor: "pointer" }} onClick={() => navigate(`/paper/${paper.id}`, { state: { paper: { ...paper, abstract: paper.paperAbstract } } })}>
+        {filteredPapers.map((paper) => {
+          const isSelected = multiSelectMode && selectedIds.includes(paper.id);
+          const isDimmed = multiSelectMode && !isSelected;
+          return (
+          <div key={paper.id}
+            className={`glass-panel library-card${isDimmed ? ' task-item-dimmed' : ''}${isSelected ? ' task-item-selected' : ''}`}
+            style={{ padding: "24px 32px", cursor: "pointer" }}
+            onClick={() => {
+              if (multiSelectMode) toggleSelectId(paper.id);
+              else navigate(`/paper/${paper.id}`, { state: { paper: { ...paper, abstract: paper.paperAbstract } } });
+            }}
+          >
             <Star size={20} color="#fbbf24" fill={paper.starred ? "#fbbf24" : "none"} className="card-star-corner" onClick={(e) => toggleStar(paper.id, e)} />
             <div className="card-header" style={{ marginBottom: "16px" }}>
               <div>
@@ -229,7 +295,8 @@ export default function Library() {
             <div className="tag-group" style={{ marginBottom: 12 }}>{(paper.tags || []).map((tag) => <span key={tag} className="tag" style={getTagStyle(tag)}>{tag}</span>)}</div>
             <div className="abstract-text">{paper.paperAbstract || paper.abstract || ""}</div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

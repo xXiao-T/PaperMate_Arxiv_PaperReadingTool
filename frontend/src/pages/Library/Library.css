@@ -431,3 +431,48 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
+.tag-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-group .tag { white-space: nowrap; display: inline-block; }
+
+/* 多选按钮（与 AutoFetch 同款） */
+.header-actions .btn-multi-select {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.header-actions .btn-multi-select:hover {
+  background: #dbeafe;
+}
+.btn-multi-select-active {
+  background: #1d4ed8 !important;
+  color: #fff !important;
+  border-color: #1d4ed8 !important;
+}
+.header-actions .select-all-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: #64748b;
+  cursor: pointer;
+}
+.header-actions .select-all-icon:hover {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+.select-all-icon-active { color: #1d4ed8; background: #dbeafe; }
+.header-actions .btn-delete-selected {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.header-actions .btn-delete-selected:hover {
+  background: #fee2e2;
+}
+.btn-delete-confirm {
+  background: #dc2626 !important;
+  color: #fff !important;
+  border-color: #dc2626 !important;
+}

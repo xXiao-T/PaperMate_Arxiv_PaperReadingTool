@@ -4,8 +4,9 @@ import './AutoFetch.css';
 import '../Library/Library.css';
 import '../PaperDetail/PaperDetail.css';
 import { getFetchTasks, createFetchTask, updateFetchTask, deleteFetchTask, runFetchTaskNow, toggleFetchTaskStatus } from '../../api/fetchApi';
+import useTagColors from '../../hooks/useTagColors';
 
-const ALL_TAGS = ['星标', '自然语言处理', 'Transformer', '预训练模型', '计算机视觉', '深度学习', '机器学习', '主题模型', '导入文献'];
+const DEFAULT_TAGS = ['星标', '导入文献'];
 const freqMatchMap = {
   '每天': /每天/,
   '每周一': /每周/,
@@ -73,27 +74,11 @@ export default function AutoFetch() {
     }
   };
 
+  const getTagColor = useTagColors();
   const hashStringToColor = (text) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      hash &= hash;
-    }
-    const hue = Math.abs(hash) % 360;
-    const saturation = 60;
-    const lightness = 90;
-    const textLightness = 25;
-    return {
-      backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-      color: `hsl(${hue}, ${saturation}%, ${textLightness}%)`,
-      borderColor: `hsla(${hue}, ${saturation}%, ${lightness - 12}%, 0.7)`,
-    };
+    const c = getTagColor(text);
+    return { backgroundColor: c, color: c.replace('90%', '25%'), borderColor: c.replace('90%', '78%') };
   };
-
-  const modalAvailableTags = (() => {
-    const existing = tagModalContext === 'create' ? autoTags : editTags;
-    return ALL_TAGS.filter((t) => !existing.includes(t));
-  })();
 
   const toggleModalTag = (tag) => {
     setModalSelectedTags((prev) =>
@@ -146,8 +131,20 @@ export default function AutoFetch() {
     setEditTags((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
+  const [allTags, setAllTags] = useState(DEFAULT_TAGS);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    import('../../api/request').then(m => m.apiFetch('/api/tags')).then(tags => {
+      setAllTags([...new Set([...DEFAULT_TAGS, ...(tags||[]).map(t=>t.name)])]);
+    }).catch(() => {});
+  }, []);
+
+  const modalAvailableTags = (() => {
+    const existing = tagModalContext === 'create' ? autoTags : editTags;
+    return allTags.filter((t) => !existing.includes(t));
+  })();
 
   // ── 初始加载任务列表 ──
   const loadTasks = async () => {

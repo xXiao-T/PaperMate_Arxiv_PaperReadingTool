@@ -98,7 +98,8 @@ function buildSystemContent(systemPrompt, paperContext) {
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${aiConfig.apiKey}`,
+    ...(process.env.REACT_APP_AI_USE_PROXY === 'true'
+      ? {} : { Authorization: `Bearer ${aiConfig.apiKey}` }),
   };
 }
 
@@ -176,7 +177,10 @@ export function streamChat({ messages, paperContext, callbacks, signal }) {
     paperContext,
   });
 
-  const url = `${aiConfig.baseURL}/chat/completions`;
+  const isProxy = process.env.REACT_APP_AI_USE_PROXY === 'true';
+  const url = isProxy
+    ? 'http://localhost:8080/api/ai/proxy'
+    : `${aiConfig.baseURL}/chat/completions`;
 
   fetch(url, {
     method: 'POST',
@@ -282,7 +286,10 @@ export async function chat({ messages, paperContext }) {
   });
   requestBody.stream = false;
 
-  const url = `${aiConfig.baseURL}/chat/completions`;
+  const isProxy = process.env.REACT_APP_AI_USE_PROXY === 'true';
+  const url = isProxy
+    ? 'http://localhost:8080/api/ai/proxy'
+    : `${aiConfig.baseURL}/chat/completions`;
 
   const response = await fetch(url, {
     method: 'POST',

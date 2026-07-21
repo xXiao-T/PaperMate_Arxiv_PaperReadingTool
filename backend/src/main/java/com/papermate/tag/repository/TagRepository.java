@@ -12,4 +12,6 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     Optional<Tag> findByName(String name);
 
     boolean existsByName(String name);
+
+    java.util.List<Tag> findByColorIsNull();
 }

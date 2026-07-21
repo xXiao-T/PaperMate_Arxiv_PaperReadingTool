@@ -7,7 +7,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Bot, FileText, ChevronLeft, ChevronRight, Plus, Star, X, Copy, Check, Download } from 'lucide-react';
-import { getPaperDetail, searchPapers } from '../../api/paperApi';
+import { getPaperDetail } from '../../api/paperApi';
+import { getFavorites } from '../../api/libraryApi';
 import { streamChat, createMessage, resolveCommand } from '../../services/aiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -48,20 +49,12 @@ async function extractPdfText(url) {
 
 export default function Reader() {
   const location = useLocation();
-  const initialPaper = location.state?.paper || {
-    id: 2,
-    title: 'Attention Is All You Need',
-    authors: 'Vaswani et al.',
-    publishedAt: '2017-06-12',
-    tags: ['自然语言处理', 'Transformer'],
-    abstract: '这是一篇关于深度学习的论文，研究注意力机制在序列建模中的应用。',
-    pdfUrl: null,
-    arxivId: '1706.03762',
-    pdfPath: null,
-  };
+  const routedPaper = location.state?.paper;
+  const lastId = Number(localStorage.getItem('papermate_last_read'));
+  const initialPaper = routedPaper || { id: lastId || null, title: '', authors: '', publishedAt: '', tags: [], abstract: '' };
 
   const [paper, setPaper] = useState(initialPaper);
-  const paperId = paper.id || 2;
+  const paperId = paper.id || null;
 
   // ===== PDF 状态 =====
   const [numPages, setNumPages] = useState(null);
@@ -105,8 +98,11 @@ export default function Reader() {
   const deleteTimerRef = useRef(null);
   const [paperText, setPaperText] = useState('');
   const [secondPaperText, setSecondPaperText] = useState('');
+  const [kickConfirm, setKickConfirm] = useState(false);
+  const kickTimerRef = useRef(null);
   const chatListRef = useRef(null);
   const pdfContainerRef = useRef(null);
+  const [pdfWidth, setPdfWidth] = useState(600);
   const pageRef = useRef(null);
   const markerRef = useRef(null);
 
@@ -162,6 +158,7 @@ export default function Reader() {
           abstract: detail.paperAbstract || detail.abstract || current.abstract || '',
           tags: detail.tags || current.tags || [],
         }));
+        localStorage.setItem('papermate_last_read', String(paperId));
       })
       .catch(error => {
         console.error('加载论文详情失败:', error);
@@ -172,8 +169,8 @@ export default function Reader() {
     setLibraryLoading(true);
     setLibraryError('');
     try {
-      const data = await searchPapers(undefined, undefined, 0, 100);
-      const candidates = (data?.list || [])
+      const data = await getFavorites();
+      const candidates = (data || [])
         .filter(candidate => candidate.id !== paperId)
         .map(candidate => ({
           ...candidate,
@@ -651,6 +648,19 @@ export default function Reader() {
     fetchProgress();
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', handlePageClick);
+    const container = pdfContainerRef.current;
+    if (container) {
+      const observer = new ResizeObserver(entries => {
+        const w = entries[0]?.contentRect?.width;
+        if (w) setPdfWidth(Math.min(Math.floor(w - 24), 800));
+      });
+      observer.observe(container);
+      return () => {
+        observer.disconnect();
+        document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('click', handlePageClick);
+      };
+    }
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('click', handlePageClick);
@@ -694,6 +704,7 @@ export default function Reader() {
   const renderPDFViewer = (file, pageNum, totalPages, onPageChange, label, isSecond = false) => {
     const paperData = isSecond ? secondPaper : paper;
     const pdfUrl = getPdfUrl(paperData);
+    const w = isDualMode ? Math.floor((pdfWidth - 12) / 2) - 20 : pdfWidth;
     console.log('📄 renderPDFViewer PDF URL:', pdfUrl);
 
     return (
@@ -712,7 +723,7 @@ export default function Reader() {
             {paperData?.title || '文献'}
           </span>
           <span className="reader-page-label">
-            {label} 第 {pageNum} 页 / 共 {totalPages || '?'} 页
+            {label ? `${label} ` : ''}第 {pageNum} 页 / 共 {totalPages || '?'} 页
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -748,19 +759,30 @@ export default function Reader() {
           {isDualMode && isSecond && (
             <button
               className="reader-kick-btn"
-              onClick={() => setSecondPaper(null)}
+              onClick={() => {
+                if (!kickConfirm) {
+                  setKickConfirm(true);
+                  clearTimeout(kickTimerRef.current);
+                  kickTimerRef.current = setTimeout(() => setKickConfirm(false), 3000);
+                } else {
+                  clearTimeout(kickTimerRef.current);
+                  setKickConfirm(false);
+                  setSecondPaper(null);
+                }
+              }}
               style={{
                 padding: '4px 10px',
                 borderRadius: '6px',
                 border: '1px solid #ef4444',
-                background: 'white',
-                color: '#ef4444',
+                background: kickConfirm ? '#ef4444' : 'white',
+                color: kickConfirm ? 'white' : '#ef4444',
                 cursor: 'pointer',
                 fontSize: '12px',
-                marginLeft: '8px'
+                marginLeft: '8px',
+                fontWeight: kickConfirm ? 700 : 400,
               }}
             >
-              ✕ 移除
+              ✕
             </button>
           )}
         </div>
@@ -782,6 +804,7 @@ export default function Reader() {
             >
               <Page
                 pageNumber={pageNum}
+                width={Math.max(w, 300)}
                 renderTextLayer={true}
                 renderAnnotationLayer={false}
                 onRenderSuccess={isSecond ? undefined : onPageRenderSuccess}
@@ -798,6 +821,12 @@ export default function Reader() {
       </div>
     );
   };
+
+  if (!paperId) return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '16px' }}>
+      请从文库中选择一篇文献开始阅读
+    </div>
+  );
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1035,13 +1064,13 @@ export default function Reader() {
 
           {/* ===== 中间：PDF 区域 ===== */}
           <div className="reader-main-area" ref={pdfContainerRef}>
-            {renderPDFViewer(pdfFile, pageNumber, numPages, goToPage, '主文献')}
+            {renderPDFViewer(pdfFile, pageNumber, numPages, goToPage, '')}
             {isDualMode && renderPDFViewer(
               secondPdfFile || pdfFile,
               secondPageNumber,
               secondNumPages || numPages,
               goToSecondPage,
-              secondPaper?.title || '对比文献',
+              '',
               true
             )}
           </div>
@@ -1086,9 +1115,7 @@ export default function Reader() {
 
                   <div className="chat-list" ref={chatListRef}>
                     {messages.length === 0 ? (
-                      <div style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center', padding: '80px 0' }}>
-                        输入 /analyze 分析论文
-                      </div>
+                      <div style={{ flex: 1 }} />
                     ) : (
                       messages.map((msg, idx) => (
                         <div key={idx} className={`cb-wrapper ${msg.role === 'user' ? 'cb-user' : 'cb-ai'}`}>
@@ -1156,7 +1183,6 @@ export default function Reader() {
                       className="chat-action-button"
                       onClick={() => handleAiSend('/compare')}
                       disabled={isAiLoading}
-                      style={{ background: '#8b5cf6' }}
                     >
                       🔄 对比
                     </button>
