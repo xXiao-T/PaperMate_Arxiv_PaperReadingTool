@@ -13,8 +13,11 @@ export function AuthProvider({ children }) {
     if (token) {
       getMe()
         .then((userData) => setUser(userData))
-        .catch(() => {
-          setToken(null);
+        .catch((err) => {
+          // Token 过期/无效时静默清除
+          if (err.message?.includes('403') || err.message?.includes('401')) {
+            setToken(null);
+          }
           setUser(null);
         })
         .finally(() => setLoading(false));

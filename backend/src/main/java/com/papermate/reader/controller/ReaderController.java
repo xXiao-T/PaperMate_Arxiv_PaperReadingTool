@@ -32,9 +32,10 @@ public class ReaderController {
     public Result<ProgressDTO> saveProgress(
             @PathVariable Long paperId,
             @RequestParam Integer currentPage,
-            @RequestParam Integer totalPages) {
+            @RequestParam Integer totalPages,
+            @RequestParam(defaultValue = "0") Integer readingMinutes) {
         return Result.success(
-            readerService.saveProgress(paperId, currentPage, totalPages)
+            readerService.saveProgress(paperId, currentPage, totalPages, readingMinutes)
         );
     }
 

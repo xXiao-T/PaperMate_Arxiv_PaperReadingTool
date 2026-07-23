@@ -263,11 +263,20 @@ export default function Reader() {
     }
   };
 
-  // ===== 保存阅读进度 =====
+  // ===== 阅读计时器 =====
+  const readingSecondsRef = useRef(0);
+  useEffect(() => {
+    const interval = setInterval(() => { readingSecondsRef.current += 30; }, 30000);
+    return () => { clearInterval(interval); readingSecondsRef.current = 0; };
+  }, [paperId]);
+
+  // ===== 保存阅读进度（含阅读时长）=====
   const saveProgress = async (page) => {
     const total = numPages || 42;
+    const minutes = Math.round(readingSecondsRef.current / 60);
+    readingSecondsRef.current = 0; // 重置计时器
     try {
-      await fetch(`http://localhost:8080/api/papers/${paperId}/progress?currentPage=${page}&totalPages=${total}`, {
+      await fetch(`http://localhost:8080/api/papers/${paperId}/progress?currentPage=${page}&totalPages=${total}&readingMinutes=${minutes}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });

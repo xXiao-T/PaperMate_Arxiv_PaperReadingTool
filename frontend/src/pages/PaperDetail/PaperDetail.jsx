@@ -181,8 +181,8 @@ export default function PaperDetail() {
   return (
     <div className="detail-container">
       {/* 返回按钮 */}
-      <div className="back-link" onClick={() => navigate('/library')}>
-        <ArrowLeft size={16} /> 返回我的文库
+      <div className="back-link" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/library'); }}>
+        <ArrowLeft size={16} /> 返回
       </div>
 
       <div className="detail-main-grid">

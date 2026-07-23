@@ -26,6 +26,9 @@ export default function Search() {
   const inputRef = useRef(null);
   const isInitialMount = useRef(true);
 
+  // 防浏览器自动恢复滚动
+  useEffect(() => { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; }, []);
+
   // 刷页恢复搜索状态
   useEffect(() => {
     const saved = sessionStorage.getItem('search_state');
@@ -41,6 +44,21 @@ export default function Search() {
         }
       } catch {}
     }
+  }, []);
+
+  // 进入时恢复滚动，离开时保存
+  useEffect(() => {
+    const el = document.querySelector('.main-content');
+    // 恢复
+    const saved = sessionStorage.getItem('search_scroll');
+    if (saved && el) {
+      requestAnimationFrame(() => { el.scrollTop = Number(saved); });
+    }
+    return () => {
+      // 离开搜索页时保存并清空（防止详情页误用）
+      if (el) sessionStorage.setItem('search_scroll', el.scrollTop);
+      el && requestAnimationFrame(() => { el.scrollTop = 0; }); // 切页时重置到顶部
+    };
   }, []);
 
   const saveSearchState = (q, st, r, t, hs) => {
@@ -61,6 +79,7 @@ export default function Search() {
       setResults(data.list || []);
       setTotal(data.total || 0);
       saveSearchState(searchText, searchType, data.list || [], data.total || 0, true);
+      sessionStorage.removeItem('search_scroll'); // 新搜索重置滚动
     } catch {
       setResults([]);
       setTotal(0);
