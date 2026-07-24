@@ -1,50 +1,21 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { Target, Trophy, Clock, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useTagColors from '../../hooks/useTagColors';
+import { apiFetch } from '../../api/request';
 import './LearningManage.css';
-
-const PLACEHOLDER_PAPERS = [
-  {
-    id: 1,
-    title: 'Attention Is All You Need',
-    authors: 'Vaswani et al.',
-    publishedAt: '2017-06-12',
-    tags: ['自然语言处理', 'Transformer'],
-    abstract: '提出了一种全新的基于自注意力机制的序列转换模型Transformer，摒弃了传统的循环和卷积结构，在机器翻译等任务上取得了突破性成果。',
-  },
-  {
-    id: 2,
-    title: 'BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding',
-    authors: 'Devlin et al.',
-    publishedAt: '2018-10-11',
-    tags: ['自然语言处理', '预训练模型'],
-    abstract: '提出了BERT预训练语言模型，通过掩码语言模型和下一句预测任务，在11项自然语言处理任务上刷新了最佳成绩。',
-  },
-  {
-    id: 3,
-    title: 'ImageNet Classification with Deep Convolutional Neural Networks',
-    authors: 'Krizhevsky, Sutskever & Hinton',
-    publishedAt: '2012-12-03',
-    tags: ['计算机视觉', '深度学习'],
-    abstract: '提出了AlexNet深度卷积神经网络，在ImageNet大规模图像识别竞赛中以显著优势夺冠，开启了深度学习在计算机视觉领域的新纪元。',
-  },
-  {
-    id: 4,
-    title: 'Latent Dirichlet Allocation',
-    authors: 'Blei, Ng & Jordan',
-    publishedAt: '2003-01-01',
-    tags: ['机器学习', '主题模型'],
-    abstract: '提出了LDA主题模型，一种基于贝叶斯框架的生成式概率模型，广泛应用于文本挖掘、信息检索和推荐系统等领域。',
-  },
-];
 
 export default function LearningManage() {
   const navigate = useNavigate();
-  const [weeklyGoal, setWeeklyGoal] = useState(16);
-  const [monthlyGoal, setMonthlyGoal] = useState(48);
-
-  const weeklyRead = 12;
-  const monthlyRead = 12;
+  const [weeklyGoal, setWeeklyGoal] = useState(() => Number(localStorage.getItem('papermate_weekly_goal')) || 7);
+  const [monthlyGoal, setMonthlyGoal] = useState(() => Number(localStorage.getItem('papermate_monthly_goal')) || 30);
+  const [weeklyRead, setWeeklyRead] = useState(0);
+  const [monthlyRead, setMonthlyRead] = useState(0);
+  const [totalRead, setTotalRead] = useState(0);
+  const [records, setRecords] = useState([]);
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const [kgData, setKgData] = useState(null);
+  const [kgLoading, setKgLoading] = useState(false);
 
   const weeklyInputRef = useRef(null);
   const monthlyInputRef = useRef(null);
@@ -74,29 +45,33 @@ export default function LearningManage() {
     calcInputWidth(monthlyInputRef, monthlyGoal);
   }, [weeklyGoal, monthlyGoal]);
 
-  const handleGoalChange = (setter, currentVal) => (e) => {
+  const handleGoalChange = (setter, key) => (e) => {
     const raw = e.target.value.replace(/\D/g, '');
     if (raw.length > 13) return;
-    const cleaned = raw.replace(/^0+(\d)/, '$1');
-    setter(cleaned);
+    const cleaned = raw.replace(/^0+(\d)/, '$1') || '0';
+    setter(Number(cleaned));
+    localStorage.setItem(key, cleaned);
   };
 
-  const displayGoal = (val) => (val === '0' || val === '') ? '' : val;
+  const displayGoal = (val) => (!val || val === 0) ? '' : val;
 
   const [kgPeriod, setKgPeriod] = useState('weekly');
   const [recordPeriod, setRecordPeriod] = useState('all');
 
+  const getTagColor = useTagColors();
+
+  useEffect(() => {
+    apiFetch('/api/learning/stats')
+      .then(s => { setWeeklyRead(s.weeklyReadingMinutes || 0); setMonthlyRead(s.monthlyReadingMinutes || 0); setTotalRead(s.totalReadingMinutes || 0); })
+      .catch(() => {});
+    apiFetch('/api/learning/records?period=all')
+      .then(r => setRecords(r || []))
+      .catch(() => {})
+      .finally(() => setRecordsLoading(false));
+  }, []);
   const hashStringToColor = (text) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      hash &= hash;
-    }
-    const hue = Math.abs(hash) % 360;
-    return {
-      backgroundColor: `hsl(${hue}, 50%, 93%)`,
-      color: `hsla(${hue}, 50%, 35%, 0.85)`,
-    };
+    const c = getTagColor(text);
+    return { backgroundColor: c, color: c.replace('90%', '25%') };
   };
 
   const handleKeyDown = (e) => {
@@ -104,8 +79,21 @@ export default function LearningManage() {
   };
 
   const handleGenerateKG = () => {
-    const label = kgPeriod === 'weekly' ? '本周' : '本月';
-    alert('生成了' + label + '知识图谱');
+    setKgLoading(true);
+    const token = localStorage.getItem('papermate_token');
+    fetch(`http://localhost:8080/api/learning/knowledge-graph?period=${kgPeriod}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.json()).then(d => {
+      const nodes = d?.data?.nodes || [];
+      const edges = d?.data?.edges || [];
+      console.log('KG result:', nodes.length, 'nodes,', edges.length, 'edges,', { nodes, edges });
+      setKgData({ nodes, edges });
+      setKgLoading(false);
+    }).catch(() => {
+      setKgData(null);
+      setKgLoading(false);
+    });
   };
 
   const calcPercent = (read, goal) =>
@@ -129,7 +117,7 @@ export default function LearningManage() {
             <Target size={20} color="#3bcaf6" />
           </div>
           <div className="stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span>{weeklyRead}</span>
+            <span>{Math.round(weeklyRead / 6) / 10}</span>
             <span className="stat-goal">
               /
               <input
@@ -139,7 +127,7 @@ export default function LearningManage() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={displayGoal(weeklyGoal)}
-                onChange={handleGoalChange(setWeeklyGoal, weeklyGoal)}
+                onChange={handleGoalChange(setWeeklyGoal, 'papermate_weekly_goal')}
                 onKeyDown={handleKeyDown}
               />
               小时
@@ -155,7 +143,7 @@ export default function LearningManage() {
             <Target size={20} color="#3b5af6" />
           </div>
           <div className="stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span>{monthlyRead}</span>
+            <span>{Math.round(monthlyRead / 6) / 10}</span>
             <span className="stat-goal">
               /
               <input
@@ -165,7 +153,7 @@ export default function LearningManage() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={displayGoal(monthlyGoal)}
-                onChange={handleGoalChange(setMonthlyGoal, monthlyGoal)}
+                onChange={handleGoalChange(setMonthlyGoal, 'papermate_monthly_goal')}
                 onKeyDown={handleKeyDown}
               />
               小时
@@ -180,7 +168,7 @@ export default function LearningManage() {
             <div className="stat-title">总计阅读时长</div>
             <Clock size={20} color="#8b5cf6" />
           </div>
-          <div className="stat-value">34 <span style={{ fontSize: '16px', color: '#94a3b8', fontWeight: 500 }}>小时</span></div>
+          <div className="stat-value">{Math.round(totalRead / 6) / 10} <span style={{ fontSize: '16px', color: '#94a3b8', fontWeight: 500 }}>小时</span></div>
         </div>
       </div>
 
@@ -198,7 +186,11 @@ export default function LearningManage() {
           </select>
         </div>
         <div className="reading-records-scroll">
-          {PLACEHOLDER_PAPERS.map((paper) => (
+          {recordsLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>加载中...</div>
+          ) : records.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>暂无阅读记录</div>
+          ) : records.map((paper) => (
             <div
               key={paper.id}
               className="reading-record-item"
@@ -222,7 +214,7 @@ export default function LearningManage() {
                 </div>
               </div>
             </div>
-          ))}
+          )) }
         </div>
       </div>
 
@@ -232,8 +224,9 @@ export default function LearningManage() {
             type="button"
             className="kg-generate-btn"
             onClick={handleGenerateKG}
+            disabled={kgLoading}
           >
-            生成知识图谱
+            {kgLoading ? '生成中...' : '生成知识图谱'}
           </button>
           <select
             className="kg-period-select"
@@ -244,9 +237,34 @@ export default function LearningManage() {
             <option value="monthly">本月</option>
           </select>
         </div>
-        <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #cbd5e1', borderRadius: '16px', color: '#94a3b8' }}>
-          [ Echarts / Chart.js 可视化图表容器 ]
-        </div>
+        {kgData ? (
+          <div style={{ padding: '16px', border: '2px solid #3b82f6', borderRadius: '16px', fontSize: '13px' }}>
+            {kgData.nodes && kgData.nodes.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                {kgData.nodes.map(n => {
+                  const bg = getTagColor(n.label || n.id || '');
+                  return <span key={n.id} className="tag" style={{backgroundColor: bg, color: bg.replace('90%','25%'), padding: '8px 14px'}} title={n.desc || n.label}>
+                    {n.label || n.id}{n.value > 0 ? ` (${n.value})` : ''}
+                  </span>;
+                })}
+              </div>
+            ) : <p>暂无节点</p>}
+            {kgData.edges && kgData.edges.length > 0 && (
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                <p style={{fontWeight:600,marginBottom:'4px'}}>关联 ({kgData.edges.length})：</p>
+                {kgData.edges.slice(0, 15).map((e, i) => (
+                  <div key={i} style={{ padding: '2px 0' }}>
+                    {e.source} {e.label ? `(${e.label}) ` : ''}→ {e.target}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #cbd5e1', borderRadius: '16px', color: '#94a3b8' }}>
+            点击生成知识图谱
+          </div>
+        )}
       </div>
     </div>
   );

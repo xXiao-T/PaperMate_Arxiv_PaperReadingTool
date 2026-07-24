@@ -31,4 +31,9 @@ public interface AuthService {
      * @return the current user entity
      */
     User getCurrentUser();
+
+    /**
+     * 重置密码
+     */
+    void resetPassword(String email, String code, String newPassword);
 }

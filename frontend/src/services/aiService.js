@@ -52,12 +52,19 @@ function buildSystemContent(systemPrompt, paperContext) {
       if (p.authors) content += `   作者：${p.authors}\n`;
       if (p.publishedAt) content += `   发表时间：${p.publishedAt}\n`;
       if (p.tags?.length) content += `   标签：${p.tags.join('、')}\n`;
-      if (p.abstract) {
+      if (p.abstract && p.abstract !== '1') {
         const truncated =
           p.abstract.length > aiConfig.paperAbstractMaxLength
             ? p.abstract.slice(0, aiConfig.paperAbstractMaxLength) + '...'
             : p.abstract;
         content += `   摘要：${truncated}\n`;
+      }
+      if (p.rawText) {
+        const max = aiConfig.paperAbstractMaxLength * 2;
+        const truncated = p.rawText.length > max
+          ? p.rawText.slice(0, max) + '\n...[原文截断]'
+          : p.rawText;
+        content += `\n📄 原文正文（前若干页）：\n${truncated}\n`;
       }
     }
 
@@ -67,12 +74,19 @@ function buildSystemContent(systemPrompt, paperContext) {
       if (s.authors) content += `   作者：${s.authors}\n`;
       if (s.publishedAt) content += `   发表时间：${s.publishedAt}\n`;
       if (s.tags?.length) content += `   标签：${s.tags.join('、')}\n`;
-      if (s.abstract) {
+      if (s.abstract && s.abstract !== '1') {
         const truncated =
           s.abstract.length > aiConfig.paperAbstractMaxLength
             ? s.abstract.slice(0, aiConfig.paperAbstractMaxLength) + '...'
             : s.abstract;
         content += `   摘要：${truncated}\n`;
+      }
+      if (s.rawText) {
+        const max = aiConfig.paperAbstractMaxLength * 2;
+        const truncated = s.rawText.length > max
+          ? s.rawText.slice(0, max) + '\n...[原文截断]'
+          : s.rawText;
+        content += `\n📄 对比文献正文（前若干页）：\n${truncated}\n`;
       }
     }
   }
@@ -84,7 +98,8 @@ function buildSystemContent(systemPrompt, paperContext) {
 function buildHeaders() {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${aiConfig.apiKey}`,
+    ...(process.env.REACT_APP_AI_USE_PROXY === 'true'
+      ? {} : { Authorization: `Bearer ${aiConfig.apiKey}` }),
   };
 }
 
@@ -162,7 +177,10 @@ export function streamChat({ messages, paperContext, callbacks, signal }) {
     paperContext,
   });
 
-  const url = `${aiConfig.baseURL}/chat/completions`;
+  const isProxy = process.env.REACT_APP_AI_USE_PROXY === 'true';
+  const url = isProxy
+    ? 'http://localhost:8080/api/ai/proxy'
+    : `${aiConfig.baseURL}/chat/completions`;
 
   fetch(url, {
     method: 'POST',
@@ -268,7 +286,10 @@ export async function chat({ messages, paperContext }) {
   });
   requestBody.stream = false;
 
-  const url = `${aiConfig.baseURL}/chat/completions`;
+  const isProxy = process.env.REACT_APP_AI_USE_PROXY === 'true';
+  const url = isProxy
+    ? 'http://localhost:8080/api/ai/proxy'
+    : `${aiConfig.baseURL}/chat/completions`;
 
   const response = await fetch(url, {
     method: 'POST',

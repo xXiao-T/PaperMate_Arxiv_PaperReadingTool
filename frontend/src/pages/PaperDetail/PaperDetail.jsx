@@ -1,32 +1,84 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Play, ExternalLink, MessageSquare, Tag, Trash2 } from 'lucide-react';
+import { ArrowLeft, Play, ExternalLink, MessageSquare, Tag, Trash2, Edit2, Plus } from 'lucide-react';
+import { getComments, createComment, updateComment, deleteComment } from '../../api/commentApi';
+import { apiFetch } from '../../api/request';
+import useTagColors from '../../hooks/useTagColors';
 import './PaperDetail.css';
 import '../Library/Library.css';
 
 export default function PaperDetail() {
   const navigate = useNavigate();
   const location = useLocation();
-  const paper = location.state?.paper || {
+  const routedPaper = location.state?.paper || location.state;
+  const paper = routedPaper?.id ? routedPaper : {
+    id: null,
     title: '文献名',
     authors: '作者名',
     publishedAt: '发布时间',
     tags: ['标签名'],
-    abstract: '摘要内容摘要内容摘要内容摘要内容摘要内容摘要内容摘要内容摘要内容摘要内容摘要内容',
+    abstract: '摘要内容...',
   };
+
   const [paperTags, setPaperTags] = useState(paper.tags || []);
   const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [addTagModalOpen, setAddTagModalOpen] = useState(false);
   const [modalSelectedTags, setModalSelectedTags] = useState([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const deleteTimerRef = useRef(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
-  const ALL_TAGS = ['自然语言处理', 'Transformer', '预训练模型', '计算机视觉', '深度学习', '机器学习', '主题模型', '导入文献'];
+  const commentSectionRef = useRef(null);
 
-  const availableTags = ALL_TAGS.filter((t) => !paperTags.includes(t));
+  const defaultTags = ['星标', '导入文献'];
+  const [allTags, setAllTags] = useState(defaultTags);
+  // ─── 加载标签列表 ──────────────────────────────────────────────────
+  useEffect(() => {
+    apiFetch('/api/tags').then(tags => {
+      const names = (tags || []).map(t => t.name);
+      setAllTags([...new Set([...defaultTags, ...names])]);
+    }).catch(() => {});
+  }, [paper?.id]);
+
+
+  useEffect(() => {
+    if (paper?.id) {
+      setLoading(true);
+      getComments(paper.id)
+        .then(data => {
+          setComments(data || []);
+        })
+        .catch(err => {
+          console.error('加载评论失败:', err);
+          // 静默失败
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [paper?.id]);
+
+  // ─── 标签功能 ──────────────────────────────────────────────────────
+
+  const availableTags = allTags.filter((t) => !paperTags.includes(t));
+
+  const saveTags = async (tags) => {
+    try {
+      await apiFetch(`/api/papers/${paper.id}/tags`, {
+        method: 'PUT',
+        body: JSON.stringify({ tags: tags.join(',') }),
+      });
+    } catch { /* 静默 */ }
+  };
 
   const removePaperTag = (tagToRemove, e) => {
     e.stopPropagation();
     e.preventDefault();
-    setPaperTags((prev) => prev.filter((t) => t !== tagToRemove));
+    const next = paperTags.filter((t) => t !== tagToRemove);
+    setPaperTags(next);
+    saveTags(next);
   };
 
   const toggleModalTag = (tag) => {
@@ -37,8 +89,10 @@ export default function PaperDetail() {
 
   const confirmAddTags = () => {
     if (modalSelectedTags.length > 0) {
-      setPaperTags((prev) => [...prev, ...modalSelectedTags]);
+      const next = [...paperTags, ...modalSelectedTags];
+      setPaperTags(next);
       setModalSelectedTags([]);
+      saveTags(next);
     }
     setAddTagModalOpen(false);
   };
@@ -47,79 +101,88 @@ export default function PaperDetail() {
     setModalSelectedTags([]);
     setAddTagModalOpen(true);
   };
-  const [activeCommentId, setActiveCommentId] = useState(null);
-  const nextCommentId = useRef(1);
-  const commentInputRefs = useRef({});
-  const commentSectionRef = useRef(null);
 
-  useEffect(() => {
-    if (activeCommentId && commentInputRefs.current[activeCommentId]) {
-      commentInputRefs.current[activeCommentId].focus();
-    }
-  }, [activeCommentId]);
+  // ─── 评论 CRUD ─────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const handleDocumentClick = (event) => {
-      if (commentSectionRef.current && !commentSectionRef.current.contains(event.target)) {
-        setActiveCommentId(null);
-        setComments((prev) => prev.filter((comment) => comment.text.trim() !== ''));
-        if (document.activeElement instanceof HTMLElement && commentSectionRef.current.contains(document.activeElement)) {
-          document.activeElement.blur();
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleDocumentClick);
-    return () => document.removeEventListener('mousedown', handleDocumentClick);
-  }, []);
-
-
-  const hashStringToColor = (text) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      hash &= hash;
-    }
-    const hue = Math.abs(hash) % 360;
-    const saturation = 60;
-    const lightness = 90;
-    const textLightness = 25;
-    return {
-      backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-      color: `hsl(${hue}, ${saturation}%, ${textLightness}%)`,
-      borderColor: `hsla(${hue}, ${saturation}%, ${lightness - 12}%, 0.7)`,
-    };
+  const getTagColor = useTagColors();
+  const tagStyle = (name) => {
+    const c = getTagColor(name);
+    return { backgroundColor: c, color: c.replace('90%', '25%'), borderColor: c.replace('90%', '55%') };
   };
 
-  const addComment = () => {
-    const newComment = {
-      id: nextCommentId.current,
-      text: '',
-      timestamp: '刚刚',
-    };
-    nextCommentId.current += 1;
-    setComments((prev) => [newComment, ...prev.filter((comment) => comment.text.trim() !== '')]);
-    setActiveCommentId(newComment.id);
-  };
+  // ─── 创建评论 ──────────────────────────────────────────────────────
 
-  const deleteComment = (id) => {
-    setComments((prev) => prev.filter((comment) => comment.id !== id));
-    if (activeCommentId === id) {
-      setActiveCommentId(null);
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+
+    try {
+      const created = await createComment(paper.id, newComment.trim());
+      setComments(prev => [created, ...prev]);
+
+      setShowAddModal(false);
+      setNewComment('');
+    } catch (err) {
+      // 静默失败
     }
   };
 
-  const updateCommentText = (id, value) => {
-    setComments((prev) => prev.map((comment) => (
-      comment.id === id ? { ...comment, text: value } : comment
-    )));
+  // ─── 编辑评论 ──────────────────────────────────────────────────────
+
+  const startEdit = (comment) => {
+    setEditingId(comment.id);
+    setEditText(comment.content);
   };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const saveEdit = async (id) => {
+    if (!editText.trim()) return;
+
+    try {
+      const updated = await updateComment(paper.id, id, editText.trim());
+
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === id ? updated : comment
+        )
+      );
+      setEditingId(null);
+      setEditText('');
+    } catch (err) {
+      // 静默失败
+    }
+  };
+
+  // ─── 删除评论 ──────────────────────────────────────────────────────
+
+  const handleDelete = async (id) => {
+    if (deleteConfirmId !== id) {
+      setDeleteConfirmId(id);
+      clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = setTimeout(() => setDeleteConfirmId(null), 3000);
+      return;
+    }
+    clearTimeout(deleteTimerRef.current);
+    setDeleteConfirmId(null);
+
+    try {
+      await deleteComment(paper.id, id);
+      setComments(prev => prev.filter(comment => comment.id !== id));
+    } catch (err) {
+      // 静默失败
+    }
+  };
+
+  // ─── 渲染 ──────────────────────────────────────────────────────────
 
   return (
     <div className="detail-container">
       {/* 返回按钮 */}
-      <div className="back-link" onClick={() => navigate('/library')}>
-        <ArrowLeft size={16} /> 返回我的文库
+      <div className="back-link" onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/library'); }}>
+        <ArrowLeft size={16} /> 返回
       </div>
 
       <div className="detail-main-grid">
@@ -149,7 +212,7 @@ export default function PaperDetail() {
             <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '32px' }}>
               <div className="library-tag-bar" style={{ gap: '8px' }}>
                 {paperTags.map((tag) => (
-                  <div key={tag} className="tag tag-chip tag-chip-tag" style={hashStringToColor(tag)}>
+                  <div key={tag} className="tag tag-chip tag-chip-tag" style={tagStyle(tag)}>
                     <span>{tag}</span>
                     <button
                       type="button"
@@ -168,7 +231,11 @@ export default function PaperDetail() {
             </div>
 
             <div style={{ display: 'flex', gap: '16px' }}>
-              <button className="btn-action btn-primary-blue" onClick={() => navigate('/reader', { state: { paper } })} style={{ padding: '12px 28px', fontSize: '16px' }}>
+              <button
+                className="btn-action btn-primary-blue"
+                onClick={() => navigate('/reader', { state: { paper } })}
+                style={{ padding: '12px 28px', fontSize: '16px' }}
+              >
                 <Play size={18} fill="currentColor" /> 开始阅读
               </button>
             </div>
@@ -177,56 +244,157 @@ export default function PaperDetail() {
           {/* 摘要卡片 */}
           <div className="glass-panel" style={{ padding: '32px', borderRadius: '24px' }}>
             <h3 className="detail-section-title"><Tag size={20} color="#3b82f6" /> Abstract (摘要)</h3>
-            <div className="abstract-box">
-              {paper.abstract}
-            </div>
+            <div className="abstract-box">{paper.abstract || paper.paperAbstract || ''}</div>
           </div>
         </div>
 
-        {/* 右侧评论 */}
+        {/* 右侧评论面板 */}
         <div className="detail-right-column">
           <div className="glass-panel" style={{ padding: '32px', borderRadius: '24px' }} ref={commentSectionRef}>
-            <h3 className="detail-section-title"><MessageSquare size={20} color="#8b5cf6" /> 我的评论</h3>
-            {comments.length === 0 ? (
-              <div className="comment-card">
-                <p style={{ fontSize: '14px', color: '#334155', marginBottom: '8px' }}>暂无评论，点击下方新建评论开始。</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="detail-section-title" style={{ marginBottom: 0 }}>
+                <MessageSquare size={20} color="#8b5cf6" /> 我的评论
+                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'normal', marginLeft: '8px' }}>
+                  ({comments.length})
+                </span>
+              </h3>
+              <button
+                className="btn-action"
+                style={{ padding: '6px 16px', background: '#8b5cf6', color: 'white', fontSize: '13px' }}
+                onClick={() => setShowAddModal(true)}
+              >
+                <Plus size={16} /> 新建评论
+              </button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                加载中...
+              </div>
+            ) : comments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <MessageSquare size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
+                <p>暂无评论</p>
+                <p style={{ fontSize: '13px' }}>写下你对这篇论文的看法</p>
               </div>
             ) : (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`comment-card ${activeCommentId === comment.id ? 'comment-card-focused' : ''}`}
-                  onClick={() => setActiveCommentId(comment.id)}
-                >
-                  <textarea
-                    id={`comment-input-${comment.id}`}
-                    ref={(el) => { commentInputRefs.current[comment.id] = el; }}
-                    className="comment-input"
-                    value={comment.text}
-                    onChange={(e) => updateCommentText(comment.id, e.target.value)}
-                    onFocus={() => setActiveCommentId(comment.id)}
-                    placeholder="输入评论内容..."
-                    rows={3}
-                  />
-                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>{comment.timestamp}</span>
-                  <button className="comment-delete-btn" onClick={() => deleteComment(comment.id)}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {editingId === comment.id ? (
+                      // ─── 编辑模式 ────────────────────────────────
+                      <div>
+                        <textarea
+                          className="form-input"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          rows={3}
+                          autoFocus
+                        />
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                          <button
+                            className="btn-action btn-primary-blue"
+                            style={{ padding: '4px 16px', fontSize: '12px' }}
+                            onClick={() => saveEdit(comment.id)}
+                          >
+                            保存
+                          </button>
+                          <button
+                            className="btn-action btn-secondary"
+                            style={{ padding: '4px 16px', fontSize: '12px', background: '#f1f5f9', color: '#475569' }}
+                            onClick={cancelEdit}
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // ─── 显示模式 ────────────────────────────────
+                      <>
+                        <div style={{ fontSize: '14px', color: '#1e293b' }}>
+                          {comment.content}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            {comment.username ? `${comment.username} · ` : ''}
+                            {comment.createdAt ? new Date(comment.createdAt).toLocaleString('zh-CN') : '刚刚'}
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              className="btn-action"
+                              style={{ padding: '2px 10px', fontSize: '11px', background: '#eff6ff', color: '#2563eb' }}
+                              onClick={() => startEdit(comment)}
+                            >
+                              <Edit2 size={12} /> 编辑
+                            </button>
+                            <button
+                              className="btn-action"
+                              style={{
+                                padding: '2px 10px',
+                                fontSize: '11px',
+                                background: deleteConfirmId === comment.id ? '#ef4444' : '#fef2f2',
+                                color: deleteConfirmId === comment.id ? '#fff' : '#ef4444',
+                                fontWeight: deleteConfirmId === comment.id ? 600 : 400,
+                              }}
+                              onClick={() => handleDelete(comment.id)}
+                            >
+                              {deleteConfirmId === comment.id ? '确定删除' : <><Trash2 size={12} /> 删除</>}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
-            <button
-              className="btn-action"
-              style={{ width: '100%', justifyContent: 'center', background: 'white', color: '#3b82f6', border: '1px dashed #3b82f6' }}
-              onClick={addComment}
-            >
-              + 新建评论
-            </button>
           </div>
         </div>
       </div>
 
-      {/* 添加标签弹窗（页面级） */}
+      {/* ─── 新建评论弹窗 ──────────────────────────────────────────── */}
+
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="import-meta-card" style={{ width: 'min(480px, 100%)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="import-meta-header">
+              <div className="import-meta-title">新建评论</div>
+              <button className="btn-action btn-secondary" onClick={() => setShowAddModal(false)}>
+                取消
+              </button>
+            </div>
+            <div className="import-meta-form">
+              <div className="form-group">
+                <label className="form-label">评论内容 <span className="required-star">*</span></label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  placeholder="输入评论内容..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+              </div>
+              <div className="import-meta-actions">
+                <button className="btn-action btn-primary-blue" onClick={handleAddComment}>
+                  保存评论
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 添加标签弹窗 ──────────────────────────────────────────── */}
+
       {addTagModalOpen && (
         <div className="modal-overlay" onClick={() => setAddTagModalOpen(false)}>
           <div className="import-meta-card" style={{ width: 'min(480px, 100%)' }} onClick={(e) => e.stopPropagation()}>
@@ -236,7 +404,7 @@ export default function PaperDetail() {
                 取消
               </button>
             </div>
-          <div className="import-meta-form">
+            <div className="import-meta-form">
               <div className="form-group">
                 <label className="form-label">选择标签（可多选）</label>
                 <div className="tag-select-grid">
@@ -246,7 +414,7 @@ export default function PaperDetail() {
                       <div
                         key={tag}
                         className={`tag tag-chip tag-chip-tag tag-chip-action ${isSelected ? 'tag-chip-active' : ''}`}
-                        style={isSelected ? hashStringToColor(tag) : { opacity: 0.6 }}
+                        style={isSelected ? tagStyle(tag) : { opacity: 0.6 }}
                         onClick={() => toggleModalTag(tag)}
                       >
                         <span>{tag}</span>

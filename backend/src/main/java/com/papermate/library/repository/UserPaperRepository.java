@@ -9,14 +9,13 @@ import java.util.Optional;
 
 @Repository
 public interface UserPaperRepository extends JpaRepository<UserPaper, Long> {
-
     List<UserPaper> findByUserId(Long userId);
 
     Optional<UserPaper> findByUserIdAndPaperId(Long userId, Long paperId);
 
-    boolean existsByUserIdAndPaperId(Long userId, Long paperId);
+    List<UserPaper> findByUserIdAndPaperIdIn(Long userId, List<Long> paperIds);
 
-    long countByUserId(Long userId);
+    List<UserPaper> findByUserIdAndFavoritedTrueOrderByImportedAtDesc(Long userId);
 
-    void deleteByUserIdAndPaperId(Long userId, Long paperId);
+    List<UserPaper> findByUserIdOrderByImportedAtDesc(Long userId);
 }

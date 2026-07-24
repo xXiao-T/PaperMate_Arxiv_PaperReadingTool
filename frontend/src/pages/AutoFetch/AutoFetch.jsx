@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Rss, PauseCircle, PlayCircle, CheckSquare, Layers, Trash2, Search } from 'lucide-react';
+import { Plus, Rss, PauseCircle, PlayCircle, CheckSquare, Layers, Trash2, Search, Loader2 } from 'lucide-react';
 import './AutoFetch.css';
 import '../Library/Library.css';
 import '../PaperDetail/PaperDetail.css';
+import { getFetchTasks, createFetchTask, updateFetchTask, deleteFetchTask, runFetchTaskNow, toggleFetchTaskStatus } from '../../api/fetchApi';
+import useTagColors from '../../hooks/useTagColors';
 
-const ALL_TAGS = ['星标', '自然语言处理', 'Transformer', '预训练模型', '计算机视觉', '深度学习', '机器学习', '主题模型', '导入文献'];
+const DEFAULT_TAGS = ['星标', '导入文献'];
 const freqMatchMap = {
   '每天': /每天/,
   '每周一': /每周/,
   '每月1日': /每月/,
+  '仅一次': /仅一次/,
 };
 
 export default function AutoFetch() {
@@ -38,7 +41,7 @@ export default function AutoFetch() {
   const [createFreqHour, setCreateFreqHour] = useState(8);
   const [createErrors, setCreateErrors] = useState({});
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     const errors = {};
     if (!createName.trim()) errors.name = '请输入任务名';
     const trimmedKeywords = createKeywords.trim();
@@ -52,44 +55,30 @@ export default function AutoFetch() {
       return;
     }
     setCreateErrors({});
-    const newTask = {
-      id: Date.now(),
-      name: createName.trim(),
-      keywords: createKeywords.trim(),
-      freqPeriod: createFreqPeriod,
-      freqHour: createFreqHour,
-      tags: [...autoTags],
-      status: 'active',
-    };
-    setTasks((prev) => [...prev, newTask]);
-    setCreateName('');
-    setCreateKeywords('');
-    setCreateFreqPeriod('每天');
-    setCreateFreqHour(8);
-    setAutoTags([]);
-  };
-
-  const hashStringToColor = (text) => {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-      hash &= hash;
+    try {
+      const newTask = await createFetchTask({
+        name: createName.trim(),
+        keywords: createKeywords.trim(),
+        freqPeriod: createFreqPeriod,
+        freqHour: createFreqHour,
+        tags: [...autoTags],
+      });
+      setTasks((prev) => [newTask, ...prev]);
+      setCreateName('');
+      setCreateKeywords('');
+      setCreateFreqPeriod('每天');
+      setCreateFreqHour(8);
+      setAutoTags([]);
+    } catch (err) {
+      alert('创建任务失败: ' + err.message);
     }
-    const hue = Math.abs(hash) % 360;
-    const saturation = 60;
-    const lightness = 90;
-    const textLightness = 25;
-    return {
-      backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-      color: `hsl(${hue}, ${saturation}%, ${textLightness}%)`,
-      borderColor: `hsla(${hue}, ${saturation}%, ${lightness - 12}%, 0.7)`,
-    };
   };
 
-  const modalAvailableTags = (() => {
-    const existing = tagModalContext === 'create' ? autoTags : editTags;
-    return ALL_TAGS.filter((t) => !existing.includes(t));
-  })();
+  const getTagColor = useTagColors();
+  const hashStringToColor = (text) => {
+    const c = getTagColor(text);
+    return { backgroundColor: c, color: c.replace('90%', '25%'), borderColor: c.replace('90%', '78%') };
+  };
 
   const toggleModalTag = (tag) => {
     setModalSelectedTags((prev) =>
@@ -142,38 +131,43 @@ export default function AutoFetch() {
     setEditTags((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: 'LLM 追踪',
-      keywords: 'large language model, transformer, attention',
-      freqPeriod: '每天',
-      freqHour: 8,
-      tags: ['自然语言处理', 'Transformer'],
-      status: 'active',
-    },
-    {
-      id: 2,
-      name: 'Alzheimer',
-      keywords: 'Alzheimer, amyloid, neurodegeneration',
-      freqPeriod: '每周一',
-      freqHour: 8,
-      tags: ['机器学习'],
-      status: 'paused',
-    },
-  ]);
+  const [allTags, setAllTags] = useState(DEFAULT_TAGS);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleTaskStatus = (taskId, e) => {
+  useEffect(() => {
+    import('../../api/request').then(m => m.apiFetch('/api/tags')).then(tags => {
+      setAllTags([...new Set([...DEFAULT_TAGS, ...(tags||[]).map(t=>t.name)])]);
+    }).catch(() => {});
+  }, []);
+
+  const modalAvailableTags = (() => {
+    const existing = tagModalContext === 'create' ? autoTags : editTags;
+    return allTags.filter((t) => !existing.includes(t));
+  })();
+
+  // ── 初始加载任务列表 ──
+  const loadTasks = async () => {
+    setLoading(true);
+    try {
+      const data = await getFetchTasks();
+      setTasks(data);
+    } catch (err) {
+      console.error('加载抓取任务失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { loadTasks(); }, []);
+
+  const toggleTaskStatus = async (taskId, e) => {
     e.stopPropagation();
-    const currentTask = tasks.find((t) => t.id === taskId);
-    if (!currentTask) return;
-    const newStatus = currentTask.status === 'active' ? 'paused' : 'active';
-    alert(newStatus === 'active' ? '任务已恢复运行' : '任务已暂停');
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId ? { ...t, status: newStatus } : t
-      )
-    );
+    try {
+      const updated = await toggleFetchTaskStatus(taskId);
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+    } catch (err) {
+      alert('切换状态失败: ' + err.message);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -208,15 +202,18 @@ export default function AutoFetch() {
     exitMultiSelect();
   };
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
     if (deleteConfirmPending) {
-      // 确认删除
       clearTimeout(deleteTimerRef.current);
       setDeleteConfirmPending(false);
+      try {
+        await Promise.all(selectedTaskIds.map((id) => deleteFetchTask(id)));
+      } catch (err) {
+        alert('部分删除失败: ' + err.message);
+      }
       setTasks((prev) => prev.filter((t) => !selectedTaskIds.includes(t.id)));
       exitMultiSelect();
     } else {
-      // 进入确认状态
       setDeleteConfirmPending(true);
       deleteTimerRef.current = setTimeout(() => {
         setDeleteConfirmPending(false);
@@ -224,9 +221,14 @@ export default function AutoFetch() {
     }
   };
 
-  const deleteTask = () => {
+  const deleteTask = async () => {
     if (!editingTask) return;
-    setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+    try {
+      await deleteFetchTask(editingTask.id);
+      setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+    } catch (err) {
+      alert('删除失败: ' + err.message);
+    }
     setEditModalOpen(false);
     setEditingTask(null);
   };
@@ -241,14 +243,19 @@ export default function AutoFetch() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [multiSelectMode]);
 
-  const saveEdit = () => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === editingTask.id
-          ? { ...t, name: editName, keywords: editKeywords, freqPeriod: editFreqPeriod, freqHour: editFreqHour, tags: [...editTags] }
-          : t
-      )
-    );
+  const saveEdit = async () => {
+    try {
+      const updated = await updateFetchTask(editingTask.id, {
+        name: editName,
+        keywords: editKeywords,
+        freqPeriod: editFreqPeriod,
+        freqHour: editFreqHour,
+        tags: [...editTags],
+      });
+      setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? updated : t)));
+    } catch (err) {
+      alert('保存失败: ' + err.message);
+    }
     setEditModalOpen(false);
     setEditingTask(null);
   };
@@ -321,6 +328,7 @@ export default function AutoFetch() {
                 <option>每天</option>
                 <option>每周一</option>
                 <option>每月1日</option>
+                <option>仅一次</option>
               </select>
               <select
                 className="form-input fetch-freq-select"
@@ -377,10 +385,23 @@ export default function AutoFetch() {
               <option>每天</option>
               <option>每周一</option>
               <option>每月1日</option>
+              <option>仅一次</option>
             </select>
           </div>
           <div className="reading-records-scroll">
-            {filteredTasks.map((task) => {
+            {loading && (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                <p style={{ marginTop: '8px' }}>加载中...</p>
+              </div>
+            )}
+            {!loading && filteredTasks.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <Rss size={32} style={{ opacity: 0.4 }} />
+                <p style={{ marginTop: '12px' }}>暂无抓取任务，去左侧新建一个吧</p>
+              </div>
+            )}
+            {!loading && filteredTasks.map((task) => {
               const isSelected = multiSelectMode && selectedTaskIds.includes(task.id);
               const isDimmed = multiSelectMode && !selectedTaskIds.includes(task.id);
               return (
@@ -406,7 +427,21 @@ export default function AutoFetch() {
                     {task.tags.map((tag) => (<span key={tag} className="task-mini-tag" style={hashStringToColor(tag)}>{tag}</span>))}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="status-badge status-toggle-btn"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await runFetchTaskNow(task.id);
+                        await loadTasks(); // 刷新列表
+                      } catch (err) { alert('执行失败: ' + err.message); }
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', border: 'none', background: '#e0e7ff', color: '#3730a3', padding: '4px 10px', borderRadius: '6px', fontSize: '12px' }}
+                    title="立即执行一次"
+                  >
+                    <Rss size={12} /> 立即
+                  </button>
                   <button
                     className={`status-badge status-toggle-btn ${task.status === 'active' ? 'status-active' : 'status-paused'}`}
                     onClick={(e) => toggleTaskStatus(task.id, e)}
@@ -515,6 +550,7 @@ export default function AutoFetch() {
                     <option>每天</option>
                     <option>每周一</option>
                     <option>每月1日</option>
+                    <option>仅一次</option>
                   </select>
                   <select className="form-input fetch-freq-select" value={editFreqHour} onChange={(e) => setEditFreqHour(Number(e.target.value))}>
                     {Array.from({ length: 24 }, (_, i) => (<option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>))}

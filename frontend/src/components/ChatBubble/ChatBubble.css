@@ -29,7 +29,6 @@
   line-height: 1.75;
   color: #334155;
   word-break: break-word;
-  white-space: pre-wrap;
   transition: box-shadow 0.2s ease;
 }
 
@@ -70,13 +69,136 @@
   word-break: break-word;
 }
 
+/* ── Markdown 渲染容器 ── */
+.cb-markdown {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: #334155;
+  word-break: break-word;
+}
+
+/* 段落 */
+.cb-markdown p {
+  margin: 0 0 8px;
+}
+.cb-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+/* 标题 */
+.cb-markdown h1, .cb-markdown h2, .cb-markdown h3,
+.cb-markdown h4, .cb-markdown h5, .cb-markdown h6 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.cb-markdown h1 { font-size: 1.3em; }
+.cb-markdown h2 { font-size: 1.15em; }
+.cb-markdown h3 { font-size: 1.05em; }
+
+/* 无序/有序列表 */
+.cb-markdown ul, .cb-markdown ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+.cb-markdown li {
+  margin: 2px 0;
+}
+
+/* 行内代码 */
+.cb-markdown code {
+  background: rgba(148, 163, 184, 0.15);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* 代码块 */
+.cb-markdown pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+.cb-markdown pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+/* 引用 */
+.cb-markdown blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #94a3b8;
+  color: #64748b;
+}
+
+/* 表格 */
+.cb-markdown table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  font-size: 0.9em;
+}
+.cb-markdown th, .cb-markdown td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  text-align: left;
+}
+.cb-markdown th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+/* 链接 */
+.cb-markdown a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+/* 分割线 */
+.cb-markdown hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 10px 0;
+}
+
+/* 图片 */
+.cb-markdown img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+/* 粗体 / 斜体 */
+.cb-markdown strong { font-weight: 600; }
+.cb-markdown em { font-style: italic; }
+
 /* waiting 文字 */
 .cb-waiting-text {
   color: #94a3b8;
   font-style: italic;
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 0;
+}
+
+/* 思考中弹跳点 */
+.cb-dot-bounce {
+  display: inline-block;
+  animation: cb-dot-bounce 1.2s ease-in-out infinite;
+}
+@keyframes cb-dot-bounce {
+  0%, 100% { opacity: 0.15; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+  60% { opacity: 0.4; transform: translateY(0); }
 }
 
 /* 错误文字 */

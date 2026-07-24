@@ -11,6 +11,11 @@
 
 import React, { useCallback, useState } from 'react';
 import { Copy, Download, Check, RefreshCw, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './ChatBubble.css';
 
 /**
@@ -143,12 +148,19 @@ export default function ChatBubble({ message, isLast, onRetry }) {
       data-last={isLast || undefined}
     >
       <div className={`cb-bubble ${isUser ? 'cb-bubble-user' : 'cb-bubble-ai'} ${isError ? 'cb-bubble-error' : ''} ${isWaiting ? 'cb-bubble-waiting' : ''}`}>
-        {/* 内容区域 — 当前为纯文本，后续替换为 <ReactMarkdown> */}
+        {/* 内容区域 — 支持 Markdown 渲染 */}
         <div className="cb-content">
           {isWaiting ? (
             <span className="cb-waiting-text">思考中...</span>
           ) : (
-            <span className="cb-text">{content || ''}</span>
+            <div className="cb-markdown">
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+              >
+                {content || ''}
+              </ReactMarkdown>
+            </div>
           )}
           {isStreaming && <span className="cb-cursor" />}
         </div>

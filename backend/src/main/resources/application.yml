@@ -2,27 +2,42 @@ server:
   port: 8080
 
 spring:
-  application:
-    name: papermate-backend
   profiles:
-    active: dev
-
+    active: local
   datasource:
-    url: jdbc:mysql://localhost:3306/papermate?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf-8
+    url: jdbc:mysql://localhost:3306/papermate?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: 123
+    password: 1083733188zyp
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
-    open-in-view: false
+    show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: REPLACE_ME@qq.com
+    password: REPLACE_ME
+    default-encoding: UTF-8
     properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
 
 jwt:
-  secret: PaperMateSecretKeyForJWTTokenGenerationMustBeLongEnough256Bits!!
-  expiration: 86400000  # 24 hours in milliseconds
+  secret: REPLACE_ME
+  expiration: 86400000
+
+papermate:
+  upload:
+    path: uploads/pdfs
+  ai:
+    api-key: sk-placeholder
+    model: deepseek-v4-pro
+    base-url: https://api.deepseek.com

@@ -8,7 +8,7 @@
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Bot, ChevronRight, Trash2, Square } from 'lucide-react';
+import { Bot, ChevronRight, ChevronLeft, Trash2, Square } from 'lucide-react';
 import ChatBubble from '../../components/ChatBubble/ChatBubble';
 import QuickActions from './QuickActions';
 import './ReaderAIPanel.css';
@@ -75,7 +75,7 @@ export default function ReaderAIPanel({
         title="展开对话面板"
       >
         <Bot size={20} color="#9eb5db" />
-        <ChevronRight size={20} color="#9eb5db" />
+        <ChevronLeft size={20} color="#9eb5db" />
       </div>
     );
   }

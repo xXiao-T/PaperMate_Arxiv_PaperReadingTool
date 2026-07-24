@@ -22,13 +22,16 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final ResetCodeService resetCodeService;
 
     public AuthServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
-                           JwtUtil jwtUtil) {
+                           JwtUtil jwtUtil,
+                           ResetCodeService resetCodeService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.resetCodeService = resetCodeService;
     }
 
     @Override
@@ -66,9 +69,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginVO login(LoginRequest request) {
-        // 1. Find user by username
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("用户名或密码错误"));
+        String loginId = request.getUsername();  // 字段名保持 username，实际接受用户名或邮箱
+
+        // 1. 按用户名或邮箱查找（含 @ 则视为邮箱）
+        User user;
+        if (loginId.contains("@")) {
+            user = userRepository.findByEmail(loginId)
+                    .orElseThrow(() -> new IllegalArgumentException("邮箱或密码错误"));
+        } else {
+            user = userRepository.findByUsername(loginId)
+                    .orElseThrow(() -> new IllegalArgumentException("用户名或密码错误"));
+        }
 
         // 2. Check account is active
         if (Boolean.FALSE.equals(user.getIsActive())) {
@@ -115,5 +126,25 @@ public class AuthServiceImpl implements AuthService {
         }
 
         throw new IllegalArgumentException("无法获取当前用户信息");
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        // 1. 再次防线：校验验证码（防止有人跳过验证页面直接调用重置接口）
+        if (!resetCodeService.verifyCode(email, code)) {
+            throw new IllegalArgumentException("验证码错误或已失效");
+        }
+        
+        // 2. 根据邮箱查找用户
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("该邮箱未注册"));
+        
+        // 3. 将新密码加密并保存
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        // 4. 销毁验证码，保证一次性使用
+        resetCodeService.removeCode(email);
     }
 }
