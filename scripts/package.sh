@@ -26,6 +26,10 @@ echo "== 构建后端（跳过测试）=="
 JAR=$(ls backend/target/*.jar | grep -v 'original' | head -n 1)
 
 echo "== 构建前端 =="
+if [ ! -d frontend/node_modules ]; then
+  echo "（未检测到 node_modules，执行 npm ci）"
+  (cd frontend && npm ci)
+fi
 (cd frontend && NODE_OPTIONS=--openssl-legacy-provider npm run build)
 
 echo "== 组装制品 =="
