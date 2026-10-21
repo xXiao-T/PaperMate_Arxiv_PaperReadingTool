@@ -1,13 +1,13 @@
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/papermate?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: 1083733188zyp
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
 
 jwt:
-  secret: PaperMate2026JwtSecretKeyForSoftEngineeringCourseProjectAndMustBeLongEnoughForHS256
+  secret: ${JWT_SECRET}
   expiration: 86400000
