@@ -1,6 +1,7 @@
 package com.papermate.reader.service;
 
 import com.papermate.common.utils.SecurityUtil;
+import com.papermate.learning.repository.LearningStatsRepository;
 import com.papermate.paper.service.PaperService;
 import com.papermate.reader.dto.ProgressDTO;
 import com.papermate.reader.entity.ReadingProgress;
@@ -35,6 +36,9 @@ class ReaderServiceTest {
     @Mock
     private SecurityUtil securityUtil;
 
+    @Mock
+    private LearningStatsRepository statsRepository;
+
     private ReaderService readerService;
 
     @BeforeEach
@@ -42,7 +46,8 @@ class ReaderServiceTest {
         readerService = new ReaderServiceImpl(
             progressRepository,
             paperService,
-            securityUtil
+            securityUtil,
+            statsRepository
         );
     }
 
@@ -54,8 +59,8 @@ class ReaderServiceTest {
         when(progressRepository.save(any(ReadingProgress.class)))
             .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProgressDTO halfway = readerService.saveProgress(9L, 5, 10);
-        ProgressDTO completed = readerService.saveProgress(9L, 10, 10);
+        ProgressDTO halfway = readerService.saveProgress(9L, 5, 10, null);
+        ProgressDTO completed = readerService.saveProgress(9L, 10, 10, null);
 
         assertEquals(50.0, halfway.getProgressPercentage());
         assertFalse(halfway.getCompleted());
@@ -68,7 +73,7 @@ class ReaderServiceTest {
     void saveProgressRejectsCurrentPageAfterLastPage() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> readerService.saveProgress(9L, 11, 10)
+            () -> readerService.saveProgress(9L, 11, 10, null)
         );
         verify(paperService, never()).requireExists(any());
     }

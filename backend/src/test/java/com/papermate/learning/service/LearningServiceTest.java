@@ -7,6 +7,7 @@ import com.papermate.learning.repository.LearningStatsRepository;
 import com.papermate.library.dto.LibraryPaperVO;
 import com.papermate.library.service.LibraryService;
 import com.papermate.ai.service.LLMClient;
+import com.papermate.reader.entity.ReadingProgress;
 import com.papermate.reader.repository.ReadingProgressRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +32,12 @@ class LearningServiceTest {
     @Mock
     private LibraryService libraryService;
 
+    @Mock
+    private LLMClient llmClient;
+
+    @Mock
+    private ReadingProgressRepository progressRepository;
+
     private LearningService learningService;
 
     @BeforeEach
@@ -37,8 +45,8 @@ class LearningServiceTest {
         learningService = new LearningService(
             learningStatsRepository,
             libraryService,
-            null,
-            null
+            llmClient,
+            progressRepository
         );
     }
 
@@ -60,19 +68,27 @@ class LearningServiceTest {
 
     @Test
     void knowledgeGraphCountsDistinctTagsAndCooccurrences() {
-        when(libraryService.getRecords(7L, "month")).thenReturn(List.of(
-            paper("NLP", "Transformer", "NLP"),
-            paper("NLP", "LLM")
+        ReadingProgress progress = ReadingProgress.builder()
+            .userId(7L).paperId(1L).build();
+        when(progressRepository.findByUserIdAndUpdatedAtAfter(eq(7L), any(LocalDateTime.class)))
+            .thenReturn(List.of(progress));
+        when(libraryService.getRecords(7L, "all")).thenReturn(List.of(
+            paper("NLP", "LLM"),
+            paper("NLP", "LLM"),
+            paper("LLM", "Transformer"),
+            paper("LLM", "Transformer")
         ));
 
         KnowledgeGraphVO result = learningService.generateKnowledgeGraph(
             7L,
-            "month"
+            "monthly"
         );
 
         assertEquals(3, result.getNodes().size());
-        assertEquals("NLP", result.getNodes().get(0).getId());
-        assertEquals(2L, result.getNodes().get(0).getValue());
+        // 节点按出现次数降序：LLM 出现 4 次，应排第一
+        assertEquals("LLM", result.getNodes().get(0).getId());
+        assertEquals(4L, result.getNodes().get(0).getValue());
+        // 共现边按 >=2 次过滤：NLP-LLM 与 LLM-Transformer 各 2 次
         assertEquals(2, result.getEdges().size());
     }
 
