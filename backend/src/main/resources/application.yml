@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:mysql://localhost:3306/papermate?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: REPLACE_ME@qq.com
+    password: REPLACE_ME
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+
+jwt:
+  secret: REPLACE_ME
+  expiration: 86400000
+
+papermate:
+  upload:
+    path: uploads/pdfs
+  ai:
+    api-key: sk-placeholder
+    model: deepseek-v4-pro
+    base-url: https://api.deepseek.com

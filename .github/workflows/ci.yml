@@ -1,0 +1,80 @@
+# CI：pull_request 与 push 到 main 时触发。
+# PR 只做质量门禁（后端单测 + 前端构建）；push 到 main 时额外打包主干制品并上传。
+# 注意：不要添加 paths / paths-ignore 过滤——被跳过的运行会让必需检查一直 Pending。
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:                       # job 名即规则集中要选择的必需检查名称
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 显示上下文信息
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "event_name  = $EVENT_NAME"
+          echo "ref         = $REF"
+          echo "sha         = $SHA"
+          echo "pr_head_sha = $PR_HEAD_SHA"
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: 后端单元测试
+        working-directory: backend
+        run: mvn -B -ntp test
+
+      - name: 安装 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 前端构建
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: |
+          npm ci
+          npm run build
+
+      - name: 打包主干制品（仅 push 到 main）
+        if: github.event_name == 'push'
+        env:
+          BUILD_NO: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          bash scripts/package.sh 0.0.0-main "$BUILD_NO" "$RUN_ID" "$COMMIT"
+          echo "--- BUILD_INFO ---"
+          cat dist/*/BUILD_INFO
+          echo "--- sha256 ---"
+          sha256sum dist/*.tar.gz
+
+      - name: 上传主干制品
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: papermate-${{ github.sha }}-${{ github.run_number }}
+          path: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+          retention-days: 14

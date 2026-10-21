@@ -1,0 +1,96 @@
+.login-screen {
+  position: relative; 
+  height: 100vh; 
+  background-color: #020617; /* 极夜黑背景 */
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  overflow: hidden;
+}
+
+.login-glow-1 { 
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+  width: 800px; height: 800px; background: rgba(37, 99, 235, 0.15); 
+  border-radius: 50%; filter: blur(120px); pointer-events: none;
+}
+
+.login-glow-2 { 
+  position: absolute; top: 0; right: 0; 
+  width: 500px; height: 500px; background: rgba(147, 51, 234, 0.1); 
+  border-radius: 50%; filter: blur(100px); pointer-events: none;
+}
+
+.login-box { 
+  position: relative; z-index: 10; width: 420px; padding: 40px; 
+}
+
+.input-field {
+  width: 100%; padding: 16px; background: rgba(255,255,255,0.05); 
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; 
+  color: white; margin-bottom: 16px; transition: all 0.3s;
+  outline: none;
+}
+
+.input-field:focus { 
+  background: rgba(255,255,255,0.1); 
+  border-color: rgba(96, 165, 250, 0.5); 
+}
+
+.btn-primary {
+  width: 100%; padding: 16px; background: rgba(255,255,255,0.1); 
+  color: white; border: 1px solid rgba(255,255,255,0.1); 
+  border-radius: 16px; font-weight: 500; transition: all 0.3s; 
+  cursor: pointer;
+}
+
+.btn-primary:hover { 
+  background: rgba(255,255,255,0.2); 
+}
+
+.btn-inside {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-75%);
+  height: 32px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.3s;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.btn-inside:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-75%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #e2e8f0;
+}
